@@ -382,22 +382,20 @@ function renderAllShapes(ev) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.clear(gl.COLOR_BUFFER_BIT);
 
+  // Draw the floor
+  var floor = new Cube();
+  floor.color = [ 0.4, 0.6, 0.0, 1.0 ];
+  floor.textureNum = -2;
+  floor.matrix.scale(1000, 1, 1000);
+  floor.matrix.translate(-0.5, -2, 0.5);
+  floor.render();
 
-  var body = new Cube();
-  body.color = [1.0, 0.0, 0.0, 1.0];
-  body.textureNum = 0;
-  body.matrix.translate(-0.25, -0.75, 0.0);
-  body.matrix.rotate(-5, 1, 0, 0);
-  //body.matrix.scale(0.5, 0.3, 0.5);
-  body.render();
-
-  var yellow = new Cube();
-  yellow.color = [1, 1, 0, 1];
-  yellow.matrix.setTranslate(0, -0.8 , 50);
-  yellow.matrix.rotate(-5, 1, 0, 0);
-  yellow.matrix.scale(20.0, 20.0, 20.0);
-  yellow.matrix.translate(-0.5, 0, 0);
-  yellow.render();
+  // Draw the sky box
+  var skyBox = new Cube();
+  skyBox.textureNum = -0;
+  skyBox.matrix.scale(1000, 1000, 1000);
+  skyBox.matrix.translate(-0.5, -0.5, 0.5);
+  skyBox.render();
 
   var duration = performance.now() - startTime;
   sendToTextHTML(`ms: ${Math.floor(duration)} fps: ${Math.floor(10000/duration)}`, "numdot");

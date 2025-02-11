@@ -1,7 +1,7 @@
 class Camera {
     constructor(){
         this.fov = 60.0
-        this.movementSpeed = 0.5;
+        this.movementSpeed = 0.1;
         this.alpha = 1;
 
         this.eye = new Vector3([1, 0, 0]);
@@ -22,18 +22,12 @@ class Camera {
     }
 
     moveForward() {
-        console.log("Move Forward");
         var distance = new Vector3(this.at.elements);
-
-        console.log("Distance: ", distance.elements);
-        console.log("Distance: ", this.at.elements);
-
         distance.sub(this.eye);
         distance.normalize();
         distance.mul(this.movementSpeed);
         this.eye.add(distance);
         this.at.add(distance);
-        this.updateView()
     }
 
     moveBackward() {
@@ -43,7 +37,6 @@ class Camera {
         distance.mul(this.movementSpeed);
         this.eye.add(distance);
         this.at.add(distance);
-        this.updateView();
     }
 
     moveLeft() {
@@ -54,7 +47,6 @@ class Camera {
         side.mul(this.movementSpeed);
         this.eye.add(side);
         this.at.add(side);
-        this.updateView();
     }
 
     moveRight() {
@@ -65,20 +57,7 @@ class Camera {
         side.mul(this.movementSpeed);
         this.eye.add(side);
         this.at.add(side);
-        this.updateView();
     }
-
-    /*
-    In your camera class, create a function called "panLeft":
-        Compute the forward vector  f = at - eye;
-        Rotate the vector f by alpha (decide a value) degrees around the up vector.
-            Create a rotation matrix: rotationMatrix.setRotate(alpha, up.x, up.y, up.z).
-            Multiply this matrix by f to compute f_prime = rotationMatrix.multiplyVector3(f);
-        Update the "at"vector to be at = eye + f_prime;
-    
-    In your camera class, create a function called "panRight":
-        Same idea as panLeft, but rotate u by -alpha degrees around the up vector.
-    */
 
     panLeft() {
         var distance = new Vector3(this.at.elements);
@@ -88,11 +67,6 @@ class Camera {
         var distancePrime = rotationMatrix.multiplyVector3(distance);
         this.at.set(this.eye);
         this.at.add(distancePrime);
-
-        console.log("Distance Prime: ", rotationMatrix);
-        console.log("this.at: ", this.at.elements);
-
-        this.updateView();
     }
 
     panRight() {
@@ -103,10 +77,5 @@ class Camera {
         var distancePrime = rotationMatrix.multiplyVector3(distance);
         this.at.set(this.eye);
         this.at.add(distancePrime);
-
-        console.log("Distance Prime: ", rotationMatrix);
-        console.log("this.at: ", this.at.elements);
-
-        this.updateView();
     }
 }
