@@ -5,6 +5,7 @@ class Pyramid {
         this.matrix = new Matrix4();
         this.buffer = null;
         this.vertices = null;
+        this.textureNum = -2;
     }
 
     generateVertices() {
@@ -28,8 +29,38 @@ class Pyramid {
             ];
         }
     }
-
     render() {
+        var rgba = this.color;
+
+        // Pass the texture number
+        gl.uniform1i(u_whichTexture, this.textureNum);
+
+        // Pass the matrix to the shader
+        gl.uniform4f(u_FragColor, rgba[0], rgba[1], rgba[2], rgba[3]);
+
+        // Pass the matrix to u_ModelMatrix attribute
+        gl.uniformMatrix4fv(u_ModelMatrix, false, this.matrix.elements);
+
+        this.generateVertices();
+        
+        // Front        
+        drawTriangle3DUV(this.vertices[0], [1,0, 0,1, 0,0]);
+
+        // Left
+        drawTriangle3DUV(this.vertices[1], [0,0, 1,1, 1,0]);     
+
+        // Right
+        drawTriangle3DUV(this.vertices[2], [1,0, 0,1, 1,1]);    
+
+        // Back
+        drawTriangle3DUV(this.vertices[3], [0,0, 1,1, 1,0]);
+
+        // Bottom
+        drawTriangle3DUV(this.vertices[4], [0,0, 1,1, 0,1]);
+        drawTriangle3DUV(this.vertices[5], [0,0, 1,1, 0,1]);
+    }
+
+    oldRender() {
         var rgba = this.color;
 
         gl.uniformMatrix4fv(u_ModelMatrix, false, this.matrix.elements);
@@ -44,13 +75,6 @@ class Pyramid {
             }
         }
 
-        // Shading levels
-        const shading = [1.0, 0.8, 0.6];
-        const faceColors = [
-            [rgba[0] * shading[0], rgba[1] * shading[0], rgba[2] * shading[0], rgba[3]],
-            [rgba[0] * shading[1], rgba[1] * shading[1], rgba[2] * shading[1], rgba[3]],
-            [rgba[0] * shading[2], rgba[1] * shading[2], rgba[2] * shading[2], rgba[3]]
-        ];
 
         // Draw each face with different shading levels
         gl.uniform4f(u_FragColor, ...faceColors[0]); // Front -Technically considered back due to weird shading

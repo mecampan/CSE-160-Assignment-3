@@ -35,6 +35,10 @@ var FSHADER_SOURCE =`
     else if (u_whichTexture == 1) {
       gl_FragColor = texture2D(u_WoodTexture, v_UV);  // Use wood / ship texture
     }
+    else if (u_whichTexture == 2) {
+      vec4 textureColor = texture2D(u_WoodTexture, v_UV);
+      gl_FragColor = mix(textureColor, u_FragColor, 0.5); // Blend texture and color 50%
+    }
     else {
       gl_FragColor = vec4(1.0, 0.2, 0.1, 1.0);    // Error, put Redish tint
     }
@@ -224,54 +228,43 @@ function addActionsforHtmlUI() {
 }
 
 let startingMouseX = 0;
-let startingMouseY = 0;
 let dragging = false;
+let lastMoveTime = 0; // Track last move time
 
 function setupMouseCamera() {
-  canvas.onmousedown = function(ev) {
+  canvas.onmousedown = function (ev) {
     startingMouseX = ev.clientX;
-    startingMouseY = ev.clientY;
     dragging = true;
-  }
+  };
 
-  canvas.onmousemove = function(ev) {
+  canvas.onmousemove = function (ev) {
     if (dragging) {
-      // For mouse movement not including camera class
-      /*
+      let now = performance.now();
+      let timeDiff = now - lastMoveTime;
+
       let deltaX = ev.clientX - startingMouseX;
-      let deltaY = ev.clientY - startingMouseY;
-  
-      let turnSpeed = 0.4; // Adjust sensitivity
-      angleSlider.value = Math.max(-180, Math.min(180, Number(angleSlider.value) - deltaX * turnSpeed));
-      g_globalAngle = angleSlider.value;  
+      let sensitivity = 0; // Set to 0 for instant response
+      let angle = 5; // Adjust panning speed
 
-      tiltSlider.value = Math.max(-180, Math.min(180, Number(tiltSlider.value) - deltaY * turnSpeed));
-      g_globaltiltAngle = tiltSlider.value;  
+      if (timeDiff > 100) { // Only move every 100ms (0.1s)
+        if (deltaX > sensitivity) {
+          camera.panRight(angle);
+        } else if (deltaX < -sensitivity) {
+          camera.panLeft(angle);
+        }
 
-      startingMouseX = ev.clientX;
-      startingMouseY = ev.clientY;
-      */
-
-      // For mouse movement including camera class
-      let deltaX = ev.clientX - startingMouseX;
-      let deltaY = ev.clientY - startingMouseY;
-  
-      let turnSpeed = 0.4; // Adjust sensitivity
-      angleSlider.value = Math.max(-180, Math.min(180, Number(angleSlider.value) - deltaX * turnSpeed));
-      g_globalAngle = angleSlider.value;  
-
-      tiltSlider.value = Math.max(-180, Math.min(180, Number(tiltSlider.value) - deltaY * turnSpeed));
-      g_globaltiltAngle = tiltSlider.value;  
-
-      startingMouseX = ev.clientX;
-      startingMouseY = ev.clientY;
+        startingMouseX = ev.clientX; // Update position
+        renderAllShapes();
+        lastMoveTime = now; // Store last move time
+      }
     }
-  }
-  
-  window.onmouseup = function() {
+  };
+
+  window.onmouseup = function () {
     dragging = false;
-  }
+  };
 }
+
 
 function initTextures(img, connected, num) {
   var image = new Image(); // Create an image object
@@ -392,8 +385,14 @@ function updateAnimationAngles() {
 }
 
 function keydown(ev) {
+  if(ev.code == 'KeyQ'){
+    camera.moveUp();
+  }
+  else if(ev.code == 'KeyE'){
+    camera.moveDown();
+  }
 
-  if(ev.code == 'KeyW'){
+  else if(ev.code == 'KeyW'){
     camera.moveForward();
   }
   else if(ev.code == 'KeyA'){
@@ -405,6 +404,7 @@ function keydown(ev) {
   else if(ev.code == 'KeyD'){
     camera.moveRight();
   }
+
   else if(ev.code == 'KeyZ'){
     camera.panLeft();
   }
@@ -412,54 +412,10 @@ function keydown(ev) {
     camera.panRight();
   }
 }
-/*
-var g_map=[
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-];
-*/
-var g_map=[
-  [[1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0]],
-  [[1, 0], 0, 0, 0, 0, 0, 0, 0, 0, [1, 0]],
-  [[1, 0], [0], [0], [0], [0], [0], [0], [0], [0], [1, 0]],
-  [[1, 0], [0], [0], [0], [1, 0], [0], [0], [0], [0], [1, 0]],
-  [[1, 0], [0], [0], [1, 0], [1, 1], [1, 0], [0], [0], [0], [1, 0]],
-  [[1, 0], [0], [0], [0], [1, 0], [0], [0], [0], [0], [1, 0]],
-  [[1, 0], [0], [0], [0], [0], [0], [0], [0], [0], [1, 0]],
-  [[1, 0], [0], [0], [0], [0], [0], [0], [0], [0], [1, 0]],
-  [[1, 0], [0], [0], [0], [0], [0], [0], [0], [0], [1, 0]],
-  [[1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0]]
-];
-
-function drawMap( position, map ) {
-  var body = new Cube();
-  for(x = 0; x < map.length; x++ )
-  {
-    for(y = 0; y < map[x].length; y++) {
-      if(map[x][y][0] == 1 || map[x][y] !== 0)
-      {
-        var height = map[x][y][1];
-        var body = new Cube();
-        body.color = [1.0, 1.0, 1.0, 1.0];
-        body.matrix.scale( 0.6, 0.6, 0.6);
-        body.matrix.translate( position[0] + x - 4, position[1] + height - 1.7, position[2] + y - 4);
-        body.render();
-      }
-    }
-  }
-}
 
 var boat_map = [
   [ 0, [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+    [0],
     [0, 0, 0, 0, 1, 0, 0, 0, 0 ],
     [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
     [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
@@ -473,11 +429,11 @@ var boat_map = [
     [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
     [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
     [0, 0, 0, 0, 1, 0, 0, 0, 0 ],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+    [0]
     ]
   ],
   [ 1, [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+    [0],
     [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
     [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
     [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
@@ -491,20 +447,20 @@ var boat_map = [
     [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
     [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
     [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+    [0]
     ]
   ],
   [ 2, [
-    [0, 0, 0, 0, 1, 0, 0, 0, 0 ],
     [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
+    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
     [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
     [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
     [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [2, 1, 1, 1, 1, 1, 1, 1, 2 ],
     [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [2, 1, 1, 1, 1, 1, 1, 1, 2 ],
     [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [2, 1, 1, 1, 1, 1, 1, 1, 2 ],
     [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
     [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
     [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
@@ -513,21 +469,130 @@ var boat_map = [
     ]
   ],
   [ 3, [
+    [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
+    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
+    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
+    [0, 1, 2, 1, 1, 1, 2, 1, 0 ],
+    [1, 0, 0, 0, 2, 0, 0, 0, 1 ],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+    [1, 0, 0, 0, 2, 0, 0, 0, 1 ],
+    [0, 1, 0, 0, 0, 0, 0, 1, 0 ],
+    [0, 0, 1, 0, 0, 0, 1, 0, 0 ],
+    [0, 0, 0, 1, 0, 1, 0, 0, 0 ],
     [0, 0, 0, 0, 1, 0, 0, 0, 0 ],
-    [0, 0, 0, 1, 0, 1, 0, 0, 0 ],
-    [0, 0, 1, 0, 0, 0, 1, 0, 0 ],
-    [0, 1, 0, 0, 0, 0, 0, 1, 0 ],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
-    [0, 1, 0, 0, 0, 0, 0, 1, 0 ],
-    [0, 0, 1, 0, 0, 0, 1, 0, 0 ],
-    [0, 0, 0, 1, 0, 1, 0, 0, 0 ],
     [0, 0, 0, 0, 1, 0, 0, 0, 0 ]
+  ]
+  ],
+  [ 4, [
+    [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
+    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
+    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
+    [0, 1, 2, 1, 1, 1, 2, 1, 0 ],
+    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0],
+    [0],
+    [0],
+    [0]
+    ]
+  ],
+  [ 5, [
+    [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
+    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
+    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
+    [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
+    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0],
+    [0],
+    [0],
+    [0]
+    ]
+  ],
+  [ 6, [
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0],
+    [0],
+    [0],
+    [0]
+    ]
+  ],
+  [ 7, [
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0],
+    [0],
+    [0],
+    [0]
+    ]
+  ],
+  [ 8, [
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0],
+    [0],
+    [0],
+    [0]
+    ]
+  ],
+  [ 8, [
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 0, 0, 3, 0, 0, 0, 0 ],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 0, 0, 3, 0, 0, 0, 0 ],
+    [0],
+    [0],
+    [0],
+    [0]
     ]
   ]
 ]
@@ -536,42 +601,54 @@ function drawBoat(position, map) {
   var body = new Cube();
 
   // Loop through the heights of the map
-  for (let x = 0; x < map.length; x++) {
+  for (let x = 0; x < map.length; x++) 
+  {
     let height = map[x][0]; // Height is now the first value
     let boxArray = map[x][1]; // The 2D array is now the second value
 
     // Loop through rows of the 2D box array
-    for (let y = 0; y < boxArray.length; y++) {
+    for (let y = 0; y < boxArray.length; y++) 
+    {
       // Loop through columns of the row
-      for (let z = 0; z < boxArray[y].length; z++) {
-        if (boxArray[y][z] == 1) { // Check if a box should be drawn
-          var body = new Cube();
-          body.color = [1.0, 1.0, 1.0, 1.0];
-          body.textureNum = 1;
-          body.matrix.scale(0.6, 0.6, 0.6);
-          body.matrix.translate(
-            position[0] + z - 4, // Use z for horizontal positioning
-            position[1] + height - 1.7, // Use height from map
-            position[2] + y - 4 // Use y for depth positioning
-          );
-          body.render();
+      for (let z = 0; z < boxArray[y].length; z++) 
+      {
+        if (boxArray[y][z] != 0) 
+        { // Check if a box should be drawn
+          if(boxArray[y][z] === 1 || boxArray[y][z] === 2) 
+          {
+            var body = new Cube();
+            body.color = [0.0, 0.0, 0.0, 1.0];
+            body.textureNum = 1;
+
+            if(boxArray[y][z] == 2) {
+              body.textureNum = 2;
+            }
+
+            body.matrix.scale(0.6, 0.6, 0.6);
+            body.matrix.translate(
+              position[0] + z - 4, // Use z for horizontal positioning
+              position[1] + height - 1.7, // Use height from map
+              position[2] + y - 4 // Use y for depth positioning
+            );
+            body.renderfaster();
+          }
+          else if(boxArray[y][z] === 3) 
+          {
+            var body = new Cube();
+            body.color = [0.1, 0.1, 0.1, 1.0];
+            body.matrix.scale(4.0, 2.5, 0.6);
+            body.matrix.translate(
+              position[0] + z - 4.45, // Use z for horizontal positioning
+              position[1] + height - 7.0, // Use height from map
+              position[2] + y - 4.5 // Use y for depth positioning
+            );
+            body.matrix.rotate(90, 1, 0, 0);
+            body.render();
+          }
         }
       }
     }
   }
-}
-
-function drawWater() {
-  var body = new Cube();
-  for(x = 0; x < 50; x++ )
-  {
-    for(y = 0; y < 50; y++) {
-        body.color = [0.0, 0.6, 0.9, 1.0];
-        body.matrix.scale( 0.6, 0.6, 0.6);
-        body.matrix.translate( x - 4, - 1.7, - 4);
-        body.render();
-      }
-    }
 }
 
 
@@ -588,7 +665,6 @@ function renderAllShapes(ev) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.clear(gl.COLOR_BUFFER_BIT);
 
-  //drawWater();
   // Draw the floor
   var floor = new Cube();
   floor.color = [ 0.0, 0.6, 0.9, 1.0 ];
@@ -604,7 +680,7 @@ function renderAllShapes(ev) {
   skyBox.matrix.translate(-0.5, -0.5, 0.5);
   skyBox.render();
 
-  drawBoat([0, 0, -10], boat_map);
+  drawBoat([0, 0, -20], boat_map);
 
   var duration = performance.now() - startTime;
   sendToTextHTML(`ms: ${Math.floor(duration)} fps: ${Math.floor(10000/duration)}`, "numdot");

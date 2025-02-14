@@ -5,7 +5,7 @@ class Cube {
         this.matrix = new Matrix4();
         this.buffer = null;
         this.vertices = null;
-        this.allVertices = null;
+        this.cubeVerts = null;
         this.textureNum = -2;
     }
 
@@ -37,25 +37,26 @@ class Cube {
                 [0,0,0, 0,0,-1, 1,0,-1]
             ];
         }
-        if(this.allVertices === null) {
-            this.allVertices = [];
-            this.allVertices = this.allVertices.concat( [0,0,0, 1,1,0, 1,0,0] );
-            this.allVertices = this.allVertices.concat( [0,0,0, 0,1,0, 1,1,0] );
+        if(this.cubeVerts === null) {
+            this.cubeVerts = [
+                0,0,0,  1,1,0,  1,0,0,
+                0,0,0,  0,1,0,  1,1,0,
 
-            this.allVertices = this.allVertices.concat( [0,1,0, 1,1,-1, 0,1,-1] );
-            this.allVertices = this.allVertices.concat( [0,1,0, 1,1,-1, 1,1,0] );
+                0,1,0, 1,1,-1, 0,1,-1,
+                0,1,0, 1,1,-1, 1,1,0,
 
-            this.allVertices = this.allVertices.concat( [0,0,-1, 0,1,0, 0,0,0] );
-            this.allVertices = this.allVertices.concat( [0,0,-1, 0,1,0, 0,1,-1] );
+                0,0,-1, 0,1,0, 0,0,0,
+                0,0,-1, 0,1,0, 0,1,-1,
 
-            this.allVertices = this.allVertices.concat( [1,0,-1, 1,1,0, 1,0,0] );
-            this.allVertices = this.allVertices.concat( [1,0,-1, 1,1,0, 1,1,-1] );
+                1,0,-1, 1,1,0, 1,0,0,
+                1,0,-1, 1,1,0, 1,1,-1,
 
-            this.allVertices = this.allVertices.concat( [0,0,-1, 1,1,-1, 1,0,-1] );
-            this.allVertices = this.allVertices.concat( [0,0,-1, 0,1,-1, 1,1,-1] );
+                0,0,-1, 1,1,-1, 1,0,-1,
+                0,0,-1, 0,1,-1, 1,1,-1,
 
-            this.allVertices = this.allVertices.concat( [0,0,0, 1,0,-1, 1,0,0] );
-            this.allVertices = this.allVertices.concat( [0,0,0, 0,0,-1, 1,0,-1] );
+                0,0,0, 1,0,-1, 1,0,0,
+                0,0,0, 0,0,-1, 1,0,-1
+            ];
         }
     }
     
@@ -114,7 +115,7 @@ class Cube {
 
         this.generateVertices();
 
-        drawTriangle3DUV(this.allVertices);      
+        drawTriangle3DUV(this.cubeVerts);      
     }
 
     renderfaster() {
@@ -133,8 +134,8 @@ class Cube {
             initTriangle3D();
         }
 
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.DYNAMIC_DRAW);
-        gl.drawArrays(gl.TRIANGLES, 0, 36);   
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.cubeVerts), gl.DYNAMIC_DRAW);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);   
     }
 }
 

@@ -21,6 +21,24 @@ class Camera {
         gl.uniformMatrix4fv(u_ViewMatrix, false, this.viewMatrix.elements);
     }
 
+    moveUp() {
+        var movement = new Vector3(this.up.elements); // Get the up vector
+        movement.normalize();
+        movement.mul(this.movementSpeed);
+        
+        this.eye.add(movement);
+        this.at.add(movement);
+    }
+    
+    moveDown() {
+        var movement = new Vector3(this.up.elements); // Get the up vector
+        movement.normalize();
+        movement.mul(this.movementSpeed);
+        
+        this.eye.sub(movement);
+        this.at.sub(movement);
+    }    
+
     moveForward() {
         var distance = new Vector3(this.at.elements);
         distance.sub(this.eye);
@@ -59,21 +77,21 @@ class Camera {
         this.at.add(side);
     }
 
-    panLeft() {
+    panLeft( angle = this.alpha ) {
         var distance = new Vector3(this.at.elements);
         distance.sub(this.eye);
         var rotationMatrix = new Matrix4();
-        rotationMatrix.setRotate(this.alpha, this.up.elements[0], this.up.elements[1], this.up.elements[2]);
+        rotationMatrix.setRotate(angle, this.up.elements[0], this.up.elements[1], this.up.elements[2]);
         var distancePrime = rotationMatrix.multiplyVector3(distance);
         this.at.set(this.eye);
         this.at.add(distancePrime);
     }
 
-    panRight() {
+    panRight( angle = this.alpha ) {
         var distance = new Vector3(this.at.elements);
         distance.sub(this.eye);
         var rotationMatrix = new Matrix4();
-        rotationMatrix.setRotate(-this.alpha, this.up.elements[0], this.up.elements[1], this.up.elements[2]);
+        rotationMatrix.setRotate(-angle, this.up.elements[0], this.up.elements[1], this.up.elements[2]);
         var distancePrime = rotationMatrix.multiplyVector3(distance);
         this.at.set(this.eye);
         this.at.add(distancePrime);
