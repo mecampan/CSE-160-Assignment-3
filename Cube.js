@@ -5,6 +5,7 @@ class Cube {
         this.matrix = new Matrix4();
         this.buffer = null;
         this.vertexBuffer = null;
+        this.uvBuffer = null;
         this.vertices = null;
         this.cubeVerts = null;
         this.textureVerts = null;
@@ -84,6 +85,43 @@ class Cube {
             ]
         }
     }
+
+    setupBuffer() {
+        // Create a buffer object
+        if(this.vertexBuffer === null) {
+            this.vertexBuffer = gl.createBuffer();
+            if (!this.vertexBuffer) {
+                console.log('Failed to create the buffer object');
+                return -1;
+            }
+            // Bind the buffer object to target
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+            // Write date into the buffer object
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.cubeVerts), gl.DYNAMIC_DRAW);
+            // Assign the buffer object to a_Position variable
+            gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 0, 0);
+            // Enable the assignment to a_Position variable
+            gl.enableVertexAttribArray(a_Position);
+        }
+        
+        // Create a buffer object for UV
+        if(this.uvBuffer === null) {
+            this.uvBuffer = gl.createBuffer();
+            if (!this.uvBuffer) {
+                console.log('Failed to create the uvBuffer object');
+                return -1;
+            }
+            
+            // Bind the buffer object to target
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.uvBuffer);
+            // Write date into the buffer object
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.textureVerts), gl.DYNAMIC_DRAW);
+            // Assign the buffer object to a_Position variable
+            gl.vertexAttribPointer(a_UV, 2, gl.FLOAT, false, 0, 0);
+            // Enable the assignment to a_Position variable
+            gl.enableVertexAttribArray(a_UV);
+        }
+    }
     
     render() {
         var rgba = this.color;
@@ -126,23 +164,6 @@ class Cube {
         drawTriangle3DUV(this.vertices[11], [0,0, 0,1, 1,1]);
     }
 
-    renderfast() {
-        var rgba = this.color;
-
-        // Pass the texture number
-        gl.uniform1i(u_whichTexture, this.textureNum);
-
-        // Pass the matrix to the shader
-        gl.uniform4f(u_FragColor, rgba[0], rgba[1], rgba[2], rgba[3]);
-
-        // Pass the matrix to u_ModelMatrix attribute
-        gl.uniformMatrix4fv(u_ModelMatrix, false, this.matrix.elements);
-
-        this.generateVertices();
-
-        drawTriangle3DUV(this.cubeVerts);      
-    }
-
     renderfaster() {
         var rgba = this.color;
 
@@ -159,40 +180,7 @@ class Cube {
         
         var n = 36; // The number of vertices
         
-        // Create a buffer object
-        if(this.vertexBuffer == null) {
-            this.vertexBuffer = gl.createBuffer();
-            if (!this.vertexBuffer) {
-                console.log('Failed to create the buffer object');
-                return -1;
-            }
-        }
-
-        // Bind the buffer object to target
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-        // Write date into the buffer object
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.cubeVerts), gl.DYNAMIC_DRAW);
-        // Assign the buffer object to a_Position variable
-        gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 0, 0);
-        // Enable the assignment to a_Position variable
-        gl.enableVertexAttribArray(a_Position);
-        
-        // ----------------------
-        // Create a buffer object for UV
-        var uvBuffer = gl.createBuffer();
-        if (!uvBuffer) {
-            console.log('Failed to create the uvBuffer object');
-            return -1;
-        }
-        
-        // Bind the buffer object to target
-        gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
-        // Write date into the buffer object
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.textureVerts), gl.DYNAMIC_DRAW);
-        // Assign the buffer object to a_Position variable
-        gl.vertexAttribPointer(a_UV, 2, gl.FLOAT, false, 0, 0);
-        // Enable the assignment to a_Position variable
-        gl.enableVertexAttribArray(a_UV);
+        this.setupBuffer();
         
         //return n;
         gl.drawArrays(gl.TRIANGLES, 0, n);

@@ -32,6 +32,10 @@ var FSHADER_SOURCE =`
     else if (u_whichTexture == 0) {
       gl_FragColor = texture2D(u_Sampler, v_UV);  // Use texture0
     }
+    else if (u_whichTexture == 3) {
+      vec4 textureColor = texture2D(u_Sampler, v_UV);
+      gl_FragColor = mix(textureColor, u_FragColor, 0.7); // Blend texture and color 50%    
+    }
     else if (u_whichTexture == 1) {
       gl_FragColor = texture2D(u_WoodTexture, v_UV);  // Use wood / ship texture
     }
@@ -340,6 +344,7 @@ function main() {
 
   camera = new Camera();
   document.onkeydown = keydown;
+  createRain();
 
   requestAnimationFrame(tick);
 }
@@ -617,11 +622,11 @@ function drawBoat(position, map) {
           if(boxArray[y][z] === 1 || boxArray[y][z] === 2) 
           {
             var body = new Cube();
-            body.color = [0.0, 0.0, 0.0, 1.0];
             body.textureNum = 1;
 
             if(boxArray[y][z] == 2) {
               body.textureNum = 2;
+              body.color = [0.0, 0.0, 0.0, 1.0];
             }
 
             body.matrix.scale(0.6, 0.6, 0.6);
@@ -643,13 +648,60 @@ function drawBoat(position, map) {
               position[2] + y - 4.5 // Use y for depth positioning
             );
             body.matrix.rotate(90, 1, 0, 0);
-            body.render();
+            body.renderfaster();
           }
         }
       }
     }
   }
 }
+
+function randomIntFromInterval(min, max) { // min and max included 
+  return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+let raindrops = [];
+function createRain() {
+  for (let i = 0; i < 2000; i++) {
+    let xPos = randomIntFromInterval(-400, 400);
+    let zPos = randomIntFromInterval(-400, 400);
+    let yPos = randomIntFromInterval(0, 300);
+
+    var rainDrop = new Cube();
+    rainDrop.color = [0.5, 0.5, 1.0, 1.0];
+    rainDrop.matrix.scale(0.05, 0.5, 0.05);
+    rainDrop.matrix.translate(0 + xPos, 300 - yPos, -50 + zPos);
+    raindrops.push(rainDrop);
+
+    // Your added properties
+    rainDrop.height = 300;     // Start height
+    rainDrop.currHeight = 300 - yPos; // Current Y position
+    rainDrop.low = -10;       // Bottom limit
+    rainDrop.lastDropTime = 0; // Track last drop time
+    rainDrop.xPos = xPos;
+    rainDrop.zPos = zPos;
+  }
+}
+
+function updateRain() {
+  for (let drop of raindrops) {
+    // If it reaches the bottom, reset to the top
+    if (drop.currHeight <= drop.low) {
+      drop.currHeight = drop.height; // Reset height
+      drop.matrix.setIdentity(); // Reset transformations
+      drop.matrix.scale(0.05, 0.5, 0.05);
+      drop.matrix.translate(0 + drop.xPos, drop.height, -50 + drop.zPos);
+    }
+    // Move down based on dropSpeed
+    else { 
+      drop.matrix.translate(0, -3, 0); // Move down
+      drop.currHeight--; // Decrease height
+      drop.lastDropTime = g_seconds; // Update last drop time
+    }
+    drop.renderfaster();
+  }
+}
+
 
 
 function renderAllShapes(ev) {
@@ -667,20 +719,25 @@ function renderAllShapes(ev) {
 
   // Draw the floor
   var floor = new Cube();
-  floor.color = [ 0.0, 0.6, 0.9, 1.0 ];
+  floor.color = [ 0.0, 0.3, 0.5, 1.0 ];
   floor.textureNum = -2;
-  floor.matrix.scale(100, 1, 100);
-  floor.matrix.translate(-0.5, Math.sin(g_seconds) / 4 - 1.8, 0.5);
-  floor.render();
+  floor.matrix.scale(1000, 1, 1000);
+  floor.matrix.translate(-0.5, Math.sin(g_seconds) / 6 - 1.7, 0.5);
+  floor.matrix.rotate(15*Math.sin(g_seconds), 1, 1, 0);
+  floor.renderfaster();
 
   // Draw the sky box
   var skyBox = new Cube();
-  skyBox.textureNum = 0;
+  skyBox.color = [ 0.0, 0.2, 0.2, 1.0 ];
+  skyBox.textureNum = 3;
   skyBox.matrix.scale(1000, 1000, 1000);
   skyBox.matrix.translate(-0.5, -0.5, 0.5);
-  skyBox.render();
+  skyBox.renderfaster();
+
+  updateRain();
 
   drawBoat([0, 0, -20], boat_map);
+  drawBoat([10, 0, -18], boat_map);
 
   var duration = performance.now() - startTime;
   sendToTextHTML(`ms: ${Math.floor(duration)} fps: ${Math.floor(10000/duration)}`, "numdot");
