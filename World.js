@@ -20,6 +20,7 @@ var FSHADER_SOURCE =`
   varying vec2 v_UV;
   uniform vec4 u_FragColor;
   uniform sampler2D u_Sampler;
+  uniform sampler2D u_WoodTexture;
   uniform int u_whichTexture;
   void main() {
     if (u_whichTexture == -2) {
@@ -29,7 +30,10 @@ var FSHADER_SOURCE =`
       gl_FragColor = vec4(v_UV, 1.0, 1.0);        // Use UV debug color  
     }
     else if (u_whichTexture == 0) {
-      gl_FragColor = texture2D(u_Sampler, v_UV);  // Use texture0  
+      gl_FragColor = texture2D(u_Sampler, v_UV);  // Use texture0
+    }
+    else if (u_whichTexture == 1) {
+      gl_FragColor = texture2D(u_WoodTexture, v_UV);  // Use wood / ship texture
     }
     else {
       gl_FragColor = vec4(1.0, 0.2, 0.1, 1.0);    // Error, put Redish tint
@@ -48,6 +52,7 @@ let u_ProjectionMatrix;
 let u_ViewMatrix;
 let u_GlobalRotateMatrix;
 let u_Sampler;
+let u_WoodTexture;
 let u_whichTexture;
 
 function setupWebGL() {
@@ -126,6 +131,13 @@ function connectVariablesToGLSL() {
   u_Sampler = gl.getUniformLocation(gl.program, 'u_Sampler');
   if(!u_Sampler) {
     console.log(`Failed to get the storage location of u_sampler`);
+    return;
+  }
+
+  // Get the storage location of the u_WoodTexture
+  u_WoodTexture = gl.getUniformLocation(gl.program, 'u_WoodTexture');
+  if(!u_WoodTexture) {
+    console.log(`Failed to get the storage location of u_WoodTexture`);
     return;
   }
 
@@ -224,6 +236,23 @@ function setupMouseCamera() {
 
   canvas.onmousemove = function(ev) {
     if (dragging) {
+      // For mouse movement not including camera class
+      /*
+      let deltaX = ev.clientX - startingMouseX;
+      let deltaY = ev.clientY - startingMouseY;
+  
+      let turnSpeed = 0.4; // Adjust sensitivity
+      angleSlider.value = Math.max(-180, Math.min(180, Number(angleSlider.value) - deltaX * turnSpeed));
+      g_globalAngle = angleSlider.value;  
+
+      tiltSlider.value = Math.max(-180, Math.min(180, Number(tiltSlider.value) - deltaY * turnSpeed));
+      g_globaltiltAngle = tiltSlider.value;  
+
+      startingMouseX = ev.clientX;
+      startingMouseY = ev.clientY;
+      */
+
+      // For mouse movement including camera class
       let deltaX = ev.clientX - startingMouseX;
       let deltaY = ev.clientY - startingMouseY;
   
@@ -244,7 +273,7 @@ function setupMouseCamera() {
   }
 }
 
-function initTextures(img) {
+function initTextures(img, connected, num) {
   var image = new Image(); // Create an image object
   if(!image) {
     console.log(`Failed to create the image object`);
@@ -252,7 +281,7 @@ function initTextures(img) {
   }
 
   // Register the event handler to be called on loading an image
-  image.onload = function(){ sendTextureToTEXTURE0(image); };
+  image.onload = function(){ sendTextureToTEXTURE0(image, connected, num); };
   // Tell the browser to load an image
   image.src = img;
 
@@ -260,32 +289,46 @@ function initTextures(img) {
   return true;
 }
 
-function sendTextureToTEXTURE0(image) {
-  var texture = gl.createTexture(); // Create a texture object
-  if(!texture) {
+function initTextures(img, connected, num) {
+  var image = new Image();
+  if (!image) {
+    console.log(`Failed to create the image object`);
+    return false;
+  }
+
+  image.onload = function () {
+    sendTextureToTEXTURE0(image, connected, num);
+  };
+  image.src = img;
+
+  return true;
+}
+
+function sendTextureToTEXTURE0(image, connected, num) {
+  var texture = gl.createTexture();
+  if (!texture) {
     console.log(`Failed to create the texture object`);
     return false;
   }
 
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1); // Flip the image's y axis
-  // Enable the texture unit 0
-  gl.activeTexture(gl.TEXTURE0);
-  // Bind the texture object to the target
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1); // Flip Y-axis
+  gl.activeTexture(gl.TEXTURE0 + num); // Activate the correct texture unit
   gl.bindTexture(gl.TEXTURE_2D, texture);
 
-  // Set the texture parameters
+  // Set texture parameters
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  // Set the texture image
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+  // Load the image into the texture
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
 
-  // Set the texture unit 0 to the sampler
-  gl.uniform1i(u_Sampler, 0);
+  // Link the texture unit to the corresponding uniform sampler
+  gl.uniform1i(connected, num);
 
-  //gl.clear(gl.COLOR_BUFFER_BIT); // Clear <canvas>
-
-  //gl.drawArrays(gl.TRIANGLE_STRIP, 0, n); // Draw the rectangle
-  console.log(`Finished loadTexture`);
+  console.log(`Finished loading texture into unit ${num}`);
 }
+
 
 let camera;
 function main() {
@@ -295,7 +338,8 @@ function main() {
   addActionsforHtmlUI();
   setupMouseCamera();
 
-  initTextures('sky_og.jpg');
+  initTextures('sky.jpg', u_Sampler, 0);
+  initTextures('woodBlock.jpg', u_WoodTexture, 1);
 
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -313,7 +357,7 @@ var g_seconds = performance.now()/1000.0-g_startTime;
 // Called by browser repeatedly whenever its time
 function tick() {
   // Print some debug information so we know we are running
-  g_seconds = performance.now()/1000.0-g_startTime;
+  g_seconds = performance.now()/1000.0 - g_startTime;
   //console.log(g_seconds);
 
   updateAnimationAngles();
@@ -368,6 +412,168 @@ function keydown(ev) {
     camera.panRight();
   }
 }
+/*
+var g_map=[
+  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+];
+*/
+var g_map=[
+  [[1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0]],
+  [[1, 0], 0, 0, 0, 0, 0, 0, 0, 0, [1, 0]],
+  [[1, 0], [0], [0], [0], [0], [0], [0], [0], [0], [1, 0]],
+  [[1, 0], [0], [0], [0], [1, 0], [0], [0], [0], [0], [1, 0]],
+  [[1, 0], [0], [0], [1, 0], [1, 1], [1, 0], [0], [0], [0], [1, 0]],
+  [[1, 0], [0], [0], [0], [1, 0], [0], [0], [0], [0], [1, 0]],
+  [[1, 0], [0], [0], [0], [0], [0], [0], [0], [0], [1, 0]],
+  [[1, 0], [0], [0], [0], [0], [0], [0], [0], [0], [1, 0]],
+  [[1, 0], [0], [0], [0], [0], [0], [0], [0], [0], [1, 0]],
+  [[1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0]]
+];
+
+function drawMap( position, map ) {
+  var body = new Cube();
+  for(x = 0; x < map.length; x++ )
+  {
+    for(y = 0; y < map[x].length; y++) {
+      if(map[x][y][0] == 1 || map[x][y] !== 0)
+      {
+        var height = map[x][y][1];
+        var body = new Cube();
+        body.color = [1.0, 1.0, 1.0, 1.0];
+        body.matrix.scale( 0.6, 0.6, 0.6);
+        body.matrix.translate( position[0] + x - 4, position[1] + height - 1.7, position[2] + y - 4);
+        body.render();
+      }
+    }
+  }
+}
+
+var boat_map = [
+  [ 0, [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+    [0, 0, 0, 0, 1, 0, 0, 0, 0 ],
+    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
+    [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
+    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
+    [0, 0, 0, 0, 1, 0, 0, 0, 0 ],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+    ]
+  ],
+  [ 1, [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+    [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
+    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
+    [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
+    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
+    [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+    ]
+  ],
+  [ 2, [
+    [0, 0, 0, 0, 1, 0, 0, 0, 0 ],
+    [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
+    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
+    [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+    [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
+    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
+    [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
+    [0, 0, 0, 0, 1, 0, 0, 0, 0 ]
+    ]
+  ],
+  [ 3, [
+    [0, 0, 0, 0, 1, 0, 0, 0, 0 ],
+    [0, 0, 0, 1, 0, 1, 0, 0, 0 ],
+    [0, 0, 1, 0, 0, 0, 1, 0, 0 ],
+    [0, 1, 0, 0, 0, 0, 0, 1, 0 ],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+    [0, 1, 0, 0, 0, 0, 0, 1, 0 ],
+    [0, 0, 1, 0, 0, 0, 1, 0, 0 ],
+    [0, 0, 0, 1, 0, 1, 0, 0, 0 ],
+    [0, 0, 0, 0, 1, 0, 0, 0, 0 ]
+    ]
+  ]
+]
+
+function drawBoat(position, map) {
+  var body = new Cube();
+
+  // Loop through the heights of the map
+  for (let x = 0; x < map.length; x++) {
+    let height = map[x][0]; // Height is now the first value
+    let boxArray = map[x][1]; // The 2D array is now the second value
+
+    // Loop through rows of the 2D box array
+    for (let y = 0; y < boxArray.length; y++) {
+      // Loop through columns of the row
+      for (let z = 0; z < boxArray[y].length; z++) {
+        if (boxArray[y][z] == 1) { // Check if a box should be drawn
+          var body = new Cube();
+          body.color = [1.0, 1.0, 1.0, 1.0];
+          body.textureNum = 1;
+          body.matrix.scale(0.6, 0.6, 0.6);
+          body.matrix.translate(
+            position[0] + z - 4, // Use z for horizontal positioning
+            position[1] + height - 1.7, // Use height from map
+            position[2] + y - 4 // Use y for depth positioning
+          );
+          body.render();
+        }
+      }
+    }
+  }
+}
+
+function drawWater() {
+  var body = new Cube();
+  for(x = 0; x < 50; x++ )
+  {
+    for(y = 0; y < 50; y++) {
+        body.color = [0.0, 0.6, 0.9, 1.0];
+        body.matrix.scale( 0.6, 0.6, 0.6);
+        body.matrix.translate( x - 4, - 1.7, - 4);
+        body.render();
+      }
+    }
+}
+
 
 function renderAllShapes(ev) {
   var startTime = performance.now();
@@ -382,20 +588,23 @@ function renderAllShapes(ev) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.clear(gl.COLOR_BUFFER_BIT);
 
+  //drawWater();
   // Draw the floor
   var floor = new Cube();
-  floor.color = [ 0.4, 0.6, 0.0, 1.0 ];
+  floor.color = [ 0.0, 0.6, 0.9, 1.0 ];
   floor.textureNum = -2;
-  floor.matrix.scale(1000, 1, 1000);
-  floor.matrix.translate(-0.5, -2, 0.5);
+  floor.matrix.scale(100, 1, 100);
+  floor.matrix.translate(-0.5, Math.sin(g_seconds) / 4 - 1.8, 0.5);
   floor.render();
 
   // Draw the sky box
   var skyBox = new Cube();
-  skyBox.textureNum = -0;
+  skyBox.textureNum = 0;
   skyBox.matrix.scale(1000, 1000, 1000);
   skyBox.matrix.translate(-0.5, -0.5, 0.5);
   skyBox.render();
+
+  drawBoat([0, 0, -10], boat_map);
 
   var duration = performance.now() - startTime;
   sendToTextHTML(`ms: ${Math.floor(duration)} fps: ${Math.floor(10000/duration)}`, "numdot");

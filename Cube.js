@@ -5,6 +5,7 @@ class Cube {
         this.matrix = new Matrix4();
         this.buffer = null;
         this.vertices = null;
+        this.allVertices = null;
         this.textureNum = -2;
     }
 
@@ -35,6 +36,26 @@ class Cube {
                 [0,0,0, 1,0,-1, 1,0,0],
                 [0,0,0, 0,0,-1, 1,0,-1]
             ];
+        }
+        if(this.allVertices === null) {
+            this.allVertices = [];
+            this.allVertices = this.allVertices.concat( [0,0,0, 1,1,0, 1,0,0] );
+            this.allVertices = this.allVertices.concat( [0,0,0, 0,1,0, 1,1,0] );
+
+            this.allVertices = this.allVertices.concat( [0,1,0, 1,1,-1, 0,1,-1] );
+            this.allVertices = this.allVertices.concat( [0,1,0, 1,1,-1, 1,1,0] );
+
+            this.allVertices = this.allVertices.concat( [0,0,-1, 0,1,0, 0,0,0] );
+            this.allVertices = this.allVertices.concat( [0,0,-1, 0,1,0, 0,1,-1] );
+
+            this.allVertices = this.allVertices.concat( [1,0,-1, 1,1,0, 1,0,0] );
+            this.allVertices = this.allVertices.concat( [1,0,-1, 1,1,0, 1,1,-1] );
+
+            this.allVertices = this.allVertices.concat( [0,0,-1, 1,1,-1, 1,0,-1] );
+            this.allVertices = this.allVertices.concat( [0,0,-1, 0,1,-1, 1,1,-1] );
+
+            this.allVertices = this.allVertices.concat( [0,0,0, 1,0,-1, 1,0,0] );
+            this.allVertices = this.allVertices.concat( [0,0,0, 0,0,-1, 1,0,-1] );
         }
     }
     
@@ -77,6 +98,43 @@ class Cube {
         // Bottom
         drawTriangle3DUV(this.vertices[10], [0,0, 1,1, 1,0]);
         drawTriangle3DUV(this.vertices[11], [0,0, 0,1, 1,1]);
+    }
+
+    renderfast() {
+        var rgba = this.color;
+
+        // Pass the texture number
+        gl.uniform1i(u_whichTexture, this.textureNum);
+
+        // Pass the matrix to the shader
+        gl.uniform4f(u_FragColor, rgba[0], rgba[1], rgba[2], rgba[3]);
+
+        // Pass the matrix to u_ModelMatrix attribute
+        gl.uniformMatrix4fv(u_ModelMatrix, false, this.matrix.elements);
+
+        this.generateVertices();
+
+        drawTriangle3DUV(this.allVertices);      
+    }
+
+    renderfaster() {
+        var rgba = this.color;
+
+        // Pass the texture number
+        gl.uniform1i(u_whichTexture, this.textureNum);
+
+        // Pass the matrix to the shader
+        gl.uniform4f(u_FragColor, rgba[0], rgba[1], rgba[2], rgba[3]);
+
+        // Pass the matrix to u_ModelMatrix attribute
+        gl.uniformMatrix4fv(u_ModelMatrix, false, this.matrix.elements);
+
+        if(g_vertexBuffer == null){
+            initTriangle3D();
+        }
+
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.DYNAMIC_DRAW);
+        gl.drawArrays(gl.TRIANGLES, 0, 36);   
     }
 }
 
