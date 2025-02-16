@@ -1,11 +1,11 @@
 class Camera {
     constructor(){
         this.fov = 60.0
-        this.movementSpeed = 0.1;
+        this.movementSpeed = 1;
         this.alpha = 1;
 
-        this.eye = new Vector3([1, 0, 0]);
-        this.at = new Vector3([0, 0, -1000]);
+        this.eye = new Vector3([30, 10, 0]);
+        this.at = new Vector3([-20000, 0, -1000]);
         this.up = new Vector3([0, 1, 0]);
 
         this.projectionMatrix = new Matrix4();        

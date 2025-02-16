@@ -21,6 +21,8 @@ var FSHADER_SOURCE =`
   uniform vec4 u_FragColor;
   uniform sampler2D u_Sampler;
   uniform sampler2D u_WoodTexture;
+  uniform sampler2D u_WaterTexture;
+  uniform sampler2D u_RockTexture;
   uniform int u_whichTexture;
   void main() {
     if (u_whichTexture == -2) {
@@ -32,15 +34,29 @@ var FSHADER_SOURCE =`
     else if (u_whichTexture == 0) {
       gl_FragColor = texture2D(u_Sampler, v_UV);  // Use texture0
     }
-    else if (u_whichTexture == 3) {
+    else if (u_whichTexture == 1) {
       vec4 textureColor = texture2D(u_Sampler, v_UV);
       gl_FragColor = mix(textureColor, u_FragColor, 0.7); // Blend texture and color 50%    
     }
-    else if (u_whichTexture == 1) {
+    else if (u_whichTexture == 2) {
       gl_FragColor = texture2D(u_WoodTexture, v_UV);  // Use wood / ship texture
     }
-    else if (u_whichTexture == 2) {
+    else if (u_whichTexture == 3) {
       vec4 textureColor = texture2D(u_WoodTexture, v_UV);
+      gl_FragColor = mix(textureColor, u_FragColor, 0.5); // Blend texture and color 50%
+    }
+    else if (u_whichTexture == 4) {
+      gl_FragColor = texture2D(u_WaterTexture, v_UV);  // Use water texture
+    }
+    else if (u_whichTexture == 5) {
+      vec4 textureColor = texture2D(u_WaterTexture, v_UV);
+      gl_FragColor = mix(textureColor, u_FragColor, 0.5); // Blend texture and color 50%
+    }
+    else if (u_whichTexture == 6) {
+      gl_FragColor = texture2D(u_RockTexture, v_UV);  // Use rock texture
+    }
+    else if (u_whichTexture == 7) {
+      vec4 textureColor = texture2D(u_RockTexture, v_UV);
       gl_FragColor = mix(textureColor, u_FragColor, 0.5); // Blend texture and color 50%
     }
     else {
@@ -49,6 +65,18 @@ var FSHADER_SOURCE =`
   }`
 
 // Global Variables
+const COLOR = -2;
+const DEBUG = -1;
+const SKYTEXTURE = 0;
+const SKYTEXTURECOLOR = 1;
+const WOODTEXTURE = 2;
+const WOODTEXTURECOLOR = 3;
+const WATERTEXTURE = 4;
+const WATERTEXTURECOLOR = 5;
+const ROCKTEXTURE = 6;
+const ROCKTEXTURECOLOR = 7;
+
+//-----------------------
 let canvas;
 let gl;
 let a_Position;
@@ -61,6 +89,7 @@ let u_ViewMatrix;
 let u_GlobalRotateMatrix;
 let u_Sampler;
 let u_WoodTexture;
+let u_RockTexture;
 let u_whichTexture;
 
 function setupWebGL() {
@@ -146,6 +175,13 @@ function connectVariablesToGLSL() {
   u_WoodTexture = gl.getUniformLocation(gl.program, 'u_WoodTexture');
   if(!u_WoodTexture) {
     console.log(`Failed to get the storage location of u_WoodTexture`);
+    return;
+  }
+
+  // Get the storage location of the u_RockTexture
+  u_RockTexture = gl.getUniformLocation(gl.program, 'u_RockTexture');
+  if(!u_RockTexture) {
+    console.log(`Failed to get the storage location of u_RockTexture`);
     return;
   }
 
@@ -269,6 +305,34 @@ function setupMouseCamera() {
   };
 }
 
+function keydown(ev) {
+  if(ev.code == 'KeyQ'){
+    camera.moveUp();
+  }
+  else if(ev.code == 'KeyE'){
+    camera.moveDown();
+  }
+
+  else if(ev.code == 'KeyW'){
+    camera.moveForward();
+  }
+  else if(ev.code == 'KeyA'){
+    camera.moveLeft();
+  }
+  else if(ev.code == 'KeyS'){
+    camera.moveBackward();
+  }
+  else if(ev.code == 'KeyD'){
+    camera.moveRight();
+  }
+
+  else if(ev.code == 'KeyZ'){
+    camera.panLeft();
+  }
+  else if(ev.code == 'KeyX'){
+    camera.panRight();
+  }
+}
 
 function initTextures(img, connected, num) {
   var image = new Image(); // Create an image object
@@ -335,8 +399,10 @@ function main() {
   addActionsforHtmlUI();
   setupMouseCamera();
 
-  initTextures('sky.jpg', u_Sampler, 0);
-  initTextures('woodBlock.jpg', u_WoodTexture, 1);
+  initTextures('sky.jpg', u_Sampler, SKYTEXTURE);
+  initTextures('woodBlock.jpg', u_WoodTexture, WOODTEXTURE);
+  initTextures('Water.jpg', u_WoodTexture, WATERTEXTURE);
+  initTextures('Rock.jpg', u_RockTexture, ROCKTEXTURE);
 
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -345,6 +411,13 @@ function main() {
   camera = new Camera();
   document.onkeydown = keydown;
   createRain();
+
+  // Draw the island mountains
+  var mountain = new Pyramid();
+  mountain.color = [0.25, 0.25, 0.25, 1.0];
+  mountain.matrix.translate(-150, -10, 100);
+  mountain.matrix.scale(50, 100, 50);
+  drawMountains(mountainRange, new Matrix4(mountain.matrix))
 
   requestAnimationFrame(tick);
 }
@@ -359,10 +432,7 @@ function tick() {
   //console.log(g_seconds);
 
   updateAnimationAngles();
-  
-  // Draw everything
   renderAllShapes();
-
   // Tell the browser to update again when it has time
   requestAnimationFrame(tick);
 }
@@ -389,121 +459,230 @@ function updateAnimationAngles() {
   }
 }
 
-function keydown(ev) {
-  if(ev.code == 'KeyQ'){
-    camera.moveUp();
-  }
-  else if(ev.code == 'KeyE'){
-    camera.moveDown();
+
+function renderAllShapes(ev) {
+  var startTime = performance.now();
+  camera.updateView();
+
+  // Pass the matrix to u_ModelMatrix attributes
+  var globalRotMat = new Matrix4().rotate(g_globalAngle, 0, 1, 0).scale(g_globalZoom, g_globalZoom, g_globalZoom).translate(0.0, 0.0, 0.5);
+  globalRotMat.rotate(g_globaltiltAngle, 1, 0, 0);
+  gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, globalRotMat.elements);
+
+  // Clear <canvas>
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  updateRain();
+
+  // Draw the sky box
+  var skyBox = new Cube();
+  skyBox.color = [ 0.0, 0.2, 0.2, 1.0 ];
+  skyBox.textureNum = SKYTEXTURECOLOR;
+  skyBox.matrix.scale(1000, 1000, 1000);
+  skyBox.matrix.translate(-0.5, -0.5, 0.5);
+  skyBox.renderfaster();
+
+  // Draw the ocean
+  var ocean = new Cube();
+  ocean.color = [ 0.0, 0.3, 0.5, 1.0 ];
+  ocean.matrix.scale(1000, 1, 1000);
+  ocean.matrix.translate(-0.5, Math.sin(g_seconds) / 6 - 1.7, 0.5);
+  ocean.matrix.rotate(15*Math.sin(g_seconds), 1, 1, 0);
+  ocean.renderfaster();
+
+  // Draw the island base
+  var island = new Cube();
+  island.color = [0.0, 0.25, 0.0, 1.0];
+  island.matrix.translate(-150, -10, 50);
+  island.matrix.scale(150, 10, 200);
+  island.renderfaster();
+
+  // Draw the island mountains
+  var mountain = new Pyramid();
+  mountain.color = [0.25, 0.25, 0.25, 1.0];
+  mountain.matrix.translate(-150, -10, 50);
+  mountain.matrix.scale(50, 100, 50);
+  mountain.renderfaster();
+  renderMountains();
+
+  var landHo = new Cube();
+  landHo.matrix.translate(2, 0, -18);
+  drawMap(docks, new Matrix4(landHo.matrix));
+
+  var boat1 = new Cube();
+  boat1.matrix.translate(4, 0, -24);
+  boat1.matrix.rotate(90, 0, 1, 0);
+  drawMap(boat_map, new Matrix4(boat1.matrix));
+
+  var duration = performance.now() - startTime;
+  sendToTextHTML(`ms: ${Math.floor(duration)} fps: ${Math.floor(10000/duration)}`, "numdot");
+}
+
+function sendToTextHTML(text, htmlID) {
+  var htmlElm = document.getElementById(htmlID);
+  if(!htmlElm) {
+    console.log(`Failed to get ${htmlID} from html.`);
+    return;
   }
 
-  else if(ev.code == 'KeyW'){
-    camera.moveForward();
-  }
-  else if(ev.code == 'KeyA'){
-    camera.moveLeft();
-  }
-  else if(ev.code == 'KeyS'){
-    camera.moveBackward();
-  }
-  else if(ev.code == 'KeyD'){
-    camera.moveRight();
-  }
+  htmlElm.innerHTML = text;
+}
 
-  else if(ev.code == 'KeyZ'){
-    camera.panLeft();
-  }
-  else if(ev.code == 'KeyX'){
-    camera.panRight();
+
+var mountainRange = [
+  [ 0, [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1],
+    [1, 1, 1, 1, 0],
+    [1, 1, 1, 1, 0],
+    [1, 1, 1, 1, 0],
+    [1, 1, 1, 1, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1]
+  ]
+  ]
+];
+
+let mountainArray = [];
+function renderMountains() {
+  for(let i = 0; i < mountainArray.length; i++) 
+  {
+    mountainArray[i].renderfaster();
   }
 }
 
+function drawMountains(map, positionMatrix) {
+  for (let x = 0; x < map.length; x++) {
+    let boxArray = map[x][1];
+
+    for (let y = 0; y < boxArray.length; y++) {
+      for (let z = 0; z < boxArray[y].length; z++) {
+        if (boxArray[y][z] != 0) { 
+          var body = new Pyramid();
+          body.color = [0.25, 0.25, 0.25, 1.0];
+          body.textureNum = ROCKTEXTURE;
+
+          // Apply position transformation before specific translations
+          body.matrix = new Matrix4(positionMatrix);
+          body.matrix.translate(
+            z * 0.4,
+            0,
+            -y * 0.5
+          );
+          body.matrix.rotate(randomIntFromInterval(0, 89), 0, 1, 0);
+          mountainArray.push(body);
+        }
+      }
+    }
+  }
+}
+
+var docks = [
+  [ 0, [
+    [2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2],
+    [0],
+    [0],
+    [2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2]
+    ]
+  ], 
+  [ 1, [
+    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+    ]
+  ]  
+]
+
+//---------------------------------
 var boat_map = [
   [ 0, [
     [0],
-    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
-    [0, 0, 2, 2, 2, 2, 2, 0, 0 ],
-    [0, 2, 2, 2, 2, 2, 2, 2, 0 ],
-    [2, 2, 2, 2, 2, 2, 2, 2, 2 ],
-    [2, 2, 2, 2, 2, 2, 2, 2, 2 ],
-    [2, 2, 2, 2, 2, 2, 2, 2, 2 ],
-    [2, 2, 2, 2, 2, 2, 2, 2, 2 ],
-    [2, 2, 2, 2, 2, 2, 2, 2, 2 ],
-    [2, 2, 2, 2, 2, 2, 2, 2, 2 ],
-    [2, 2, 2, 2, 2, 2, 2, 2, 2 ],
-    [0, 2, 2, 2, 2, 2, 2, 2, 0 ],
-    [0, 0, 2, 2, 2, 2, 2, 0, 0 ],
-    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
+    [0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0],
+    [0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0],
+    [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+    [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+    [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+    [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+    [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+    [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+    [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+    [0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0],
+    [0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0],
+    [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
     [0]
     ]
   ],
   [ 1, [
     [0],
-    [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
-    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
-    [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-    [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
-    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
-    [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
+    [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+    [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+    [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
     [0]
     ]
   ],
   [ 2, [
-    [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
-    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
-    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
-    [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-    [2, 1, 1, 1, 1, 1, 1, 1, 2 ],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-    [2, 1, 1, 1, 1, 1, 1, 1, 2 ],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-    [2, 1, 1, 1, 1, 1, 1, 1, 2 ],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-    [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
-    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
-    [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
-    [0, 0, 0, 0, 1, 0, 0, 0, 0 ]
+    [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+    [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 2, 1, 1, 1, 1, 1, 1, 1, 2, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 2, 1, 1, 1, 1, 1, 1, 1, 2, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 2, 1, 1, 1, 1, 1, 1, 1, 2, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+    [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
     ]
   ],
   [ 3, [
-    [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
-    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
-    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
-    [0, 1, 2, 1, 1, 1, 2, 1, 0 ],
-    [1, 0, 0, 0, 2, 0, 0, 0, 1 ],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1 ],
-    [1, 0, 0, 0, 2, 0, 0, 0, 1 ],
-    [0, 1, 0, 0, 0, 0, 0, 1, 0 ],
-    [0, 0, 1, 0, 0, 0, 1, 0, 0 ],
-    [0, 0, 0, 1, 0, 1, 0, 0, 0 ],
-    [0, 0, 0, 0, 1, 0, 0, 0, 0 ],
-    [0, 0, 0, 0, 1, 0, 0, 0, 0 ]
+    [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+    [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 1, 2, 1, 1, 1, 2, 1, 0, 0],
+    [0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 0],
+    [0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    [0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    [0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    [0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    [0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    [0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 0],
+    [0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0],
+    [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+    [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
   ]
   ],
   [ 4, [
-    [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
-    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
-    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
-    [0, 1, 2, 1, 1, 1, 2, 1, 0 ],
-    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+    [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 1, 2, 1, 1, 1, 2, 1, 0, 0],
+    [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
     [0],
     [0],
     [0],
     [0],
     [0],
-    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
     [0],
     [0],
     [0],
@@ -511,17 +690,17 @@ var boat_map = [
     ]
   ],
   [ 5, [
-    [0, 0, 0, 1, 1, 1, 0, 0, 0 ],
-    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
-    [0, 0, 1, 1, 1, 1, 1, 0, 0 ],
-    [0, 1, 1, 1, 1, 1, 1, 1, 0 ],
-    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+    [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+    [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
     [0],
     [0],
     [0],
     [0],
     [0],
-    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
     [0],
     [0],
     [0],
@@ -533,13 +712,13 @@ var boat_map = [
     [0],
     [0],
     [0],
-    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
     [0],
     [0],
     [0],
     [0],
     [0],
-    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
     [0],
     [0],
     [0],
@@ -551,31 +730,13 @@ var boat_map = [
     [0],
     [0],
     [0],
-    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
     [0],
     [0],
     [0],
     [0],
     [0],
-    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
-    [0],
-    [0],
-    [0],
-    [0]
-    ]
-  ],
-  [ 8, [
-    [0],
-    [0],
-    [0],
-    [0],
-    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
-    [0],
-    [0],
-    [0],
-    [0],
-    [0],
-    [0, 0, 0, 0, 2, 0, 0, 0, 0 ],
+    [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
     [0],
     [0],
     [0],
@@ -587,13 +748,103 @@ var boat_map = [
     [0],
     [0],
     [0],
-    [0, 0, 0, 0, 3, 0, 0, 0, 0 ],
+    [0, 0, 0, 3, 3, 2, 3, 3, 0, 0, 0],
     [0],
     [0],
     [0],
     [0],
     [0],
-    [0, 0, 0, 0, 3, 0, 0, 0, 0 ],
+    [0, 0, 0, 3, 3, 2, 3, 3, 0, 0, 0],
+    [0],
+    [0],
+    [0],
+    [0]
+    ]
+  ],
+  [ 9, [
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
+    [0],
+    [0],
+    [0],
+    [0]
+    ]
+  ],
+  [ 10, [
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
+    [0],
+    [0],
+    [0],
+    [0]
+    ]
+  ],
+  [ 11, [
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
+    [0],
+    [0],
+    [0],
+    [0]
+    ]
+  ],
+  [ 12, [
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
+    [0],
+    [0],
+    [0],
+    [0]
+    ]
+  ],
+  [ 13, [
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0],
+    [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
     [0],
     [0],
     [0],
@@ -602,54 +853,37 @@ var boat_map = [
   ]
 ]
 
-function drawBoat(position, map) {
-  var body = new Cube();
+function drawMap(map, positionMatrix) {
+  for (let x = 0; x < map.length; x++) {
+    let height = map[x][0];
+    let boxArray = map[x][1];
 
-  // Loop through the heights of the map
-  for (let x = 0; x < map.length; x++) 
-  {
-    let height = map[x][0]; // Height is now the first value
-    let boxArray = map[x][1]; // The 2D array is now the second value
+    for (let y = 0; y < boxArray.length; y++) {
+      for (let z = 0; z < boxArray[y].length; z++) {
+        if (boxArray[y][z] != 0) { 
+          var body = new Cube();
+          body.textureNum = WOODTEXTURE;
 
-    // Loop through rows of the 2D box array
-    for (let y = 0; y < boxArray.length; y++) 
-    {
-      // Loop through columns of the row
-      for (let z = 0; z < boxArray[y].length; z++) 
-      {
-        if (boxArray[y][z] != 0) 
-        { // Check if a box should be drawn
-          if(boxArray[y][z] === 1 || boxArray[y][z] === 2) 
-          {
-            var body = new Cube();
-            body.textureNum = 1;
-
-            if(boxArray[y][z] == 2) {
-              body.textureNum = 2;
-              body.color = [0.0, 0.0, 0.0, 1.0];
-            }
-
-            body.matrix.scale(0.6, 0.6, 0.6);
-            body.matrix.translate(
-              position[0] + z - 4, // Use z for horizontal positioning
-              position[1] + height - 1.7, // Use height from map
-              position[2] + y - 4 // Use y for depth positioning
-            );
-            body.renderfaster();
+          if (boxArray[y][z] == 2) {
+            body.textureNum = WOODTEXTURECOLOR;
+            body.color = [0.0, 0.0, 0.0, 1.0];
           }
-          else if(boxArray[y][z] === 3) 
-          {
-            var body = new Cube();
-            body.color = [0.1, 0.1, 0.1, 1.0];
-            body.matrix.scale(4.0, 2.5, 0.6);
-            body.matrix.translate(
-              position[0] + z - 4.45, // Use z for horizontal positioning
-              position[1] + height - 7.0, // Use height from map
-              position[2] + y - 4.5 // Use y for depth positioning
-            );
-            body.matrix.rotate(90, 1, 0, 0);
-            body.renderfaster();
+
+          if (boxArray[y][z] == 3) {
+            body.textureNum = COLOR;
+            body.color = [0.0, 0.0, 0.0, 1.0];
           }
+
+          body.matrix = new Matrix4(positionMatrix);
+          
+          body.matrix.scale(0.6, 0.6, 0.6);
+          body.matrix.translate(
+            z - 4, // Adjust horizontal positioning
+            height - 1.7, // Adjust height
+            y - 4  // Adjust depth positioning
+          );
+
+          body.renderfaster();
         }
       }
     }
@@ -663,8 +897,8 @@ function randomIntFromInterval(min, max) { // min and max included
 let raindrops = [];
 function createRain() {
   for (let i = 0; i < 2000; i++) {
-    let xPos = randomIntFromInterval(-400, 400);
-    let zPos = randomIntFromInterval(-400, 400);
+    let xPos = randomIntFromInterval(-500, 500);
+    let zPos = randomIntFromInterval(-500, 500);
     let yPos = randomIntFromInterval(0, 300);
 
     var rainDrop = new Cube();
@@ -673,11 +907,10 @@ function createRain() {
     rainDrop.matrix.translate(0 + xPos, 300 - yPos, -50 + zPos);
     raindrops.push(rainDrop);
 
-    // Your added properties
-    rainDrop.height = 300;     // Start height
-    rainDrop.currHeight = 300 - yPos; // Current Y position
-    rainDrop.low = -10;       // Bottom limit
-    rainDrop.lastDropTime = 0; // Track last drop time
+    rainDrop.height = 300;
+    rainDrop.currHeight = 300 - yPos;
+    rainDrop.low = -10;
+    rainDrop.lastDropTime = 0;
     rainDrop.xPos = xPos;
     rainDrop.zPos = zPos;
   }
@@ -700,55 +933,4 @@ function updateRain() {
     }
     drop.renderfaster();
   }
-}
-
-
-
-function renderAllShapes(ev) {
-  var startTime = performance.now();
-  camera.updateView();
-
-  // Pass the matrix to u_ModelMatrix attributes
-  var globalRotMat = new Matrix4().rotate(g_globalAngle, 0, 1, 0).scale(g_globalZoom, g_globalZoom, g_globalZoom).translate(0.0, 0.0, 0.5);
-  globalRotMat.rotate(g_globaltiltAngle, 1, 0, 0);
-  gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, globalRotMat.elements);
-
-  // Clear <canvas>
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.clear(gl.COLOR_BUFFER_BIT);
-
-  // Draw the floor
-  var floor = new Cube();
-  floor.color = [ 0.0, 0.3, 0.5, 1.0 ];
-  floor.textureNum = -2;
-  floor.matrix.scale(1000, 1, 1000);
-  floor.matrix.translate(-0.5, Math.sin(g_seconds) / 6 - 1.7, 0.5);
-  floor.matrix.rotate(15*Math.sin(g_seconds), 1, 1, 0);
-  floor.renderfaster();
-
-  // Draw the sky box
-  var skyBox = new Cube();
-  skyBox.color = [ 0.0, 0.2, 0.2, 1.0 ];
-  skyBox.textureNum = 3;
-  skyBox.matrix.scale(1000, 1000, 1000);
-  skyBox.matrix.translate(-0.5, -0.5, 0.5);
-  skyBox.renderfaster();
-
-  updateRain();
-
-  drawBoat([0, 0, -20], boat_map);
-  drawBoat([10, 0, -18], boat_map);
-
-  var duration = performance.now() - startTime;
-  sendToTextHTML(`ms: ${Math.floor(duration)} fps: ${Math.floor(10000/duration)}`, "numdot");
-}
-
-function sendToTextHTML(text, htmlID) {
-  var htmlElm = document.getElementById(htmlID);
-  if(!htmlElm) {
-    console.log(`Failed to get ${htmlID} from html.`);
-    return;
-  }
-
-  htmlElm.innerHTML = text;
 }

@@ -9,7 +9,7 @@ class Cube {
         this.vertices = null;
         this.cubeVerts = null;
         this.textureVerts = null;
-        this.textureNum = -2;
+        this.textureNum = COLOR;
     }
 
     generateVertices() {
