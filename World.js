@@ -415,12 +415,12 @@ function main() {
   // Draw the island mountains
   var mountain = new Pyramid();
   mountain.color = [0.25, 0.25, 0.25, 1.0];
-  mountain.matrix.translate(0, 0, 0);
-  mountain.matrix.scale(1, 5, 1);
-  //drawMountains(mountainRange, new Matrix4(mountain.matrix))
+  mountain.matrix.translate(-150, -10, 100);
+  mountain.matrix.scale(50, 100, 50);
+  drawMountains(mountainRange, new Matrix4(mountain.matrix))
 
   var startTree = new Cube();
-  startTree.matrix.translate(-60, 0, -80);
+  startTree.matrix.translate(-40, 0, -80);
   startTree.renderfaster();
   drawTrees(new Matrix4(startTree.matrix));
 
@@ -503,7 +503,19 @@ function renderAllShapes(ev) {
   island.matrix.scale(150, 10, 200);
   island.renderfaster();
 
+  // Draw the island mountains
+  var mountain = new Pyramid();
+  mountain.color = [0.25, 0.25, 0.25, 1.0];
+  mountain.matrix.translate(-150, -10, 50);
+  mountain.matrix.scale(50, 100, 50);
+  mountain.renderfaster();
   renderMountains();
+
+  var startTree = new Cube();
+  startTree.matrix.translate(-20, 0, -25);
+  startTree.color = [1.0, 1.0, 1.0, 0.0];
+  startTree.matrix.scale(0.0, 0.0, 0.0);
+  startTree.renderfaster();
   renderTrees();
 
   var landHo = new Cube();
@@ -554,18 +566,13 @@ function renderMountains() {
   }
 }
 
-function drawMountains(map, positionMatrix) 
-{
-  for (let x = 0; x < map.length; x++) 
-  {
+function drawMountains(map, positionMatrix) {
+  for (let x = 0; x < map.length; x++) {
     let boxArray = map[x][1];
 
-    for (let y = 0; y < boxArray.length; y++) 
-    {
-      for (let z = 0; z < boxArray[y].length; z++) 
-      {
-        if (boxArray[y][z] != 0) 
-        { 
+    for (let y = 0; y < boxArray.length; y++) {
+      for (let z = 0; z < boxArray[y].length; z++) {
+        if (boxArray[y][z] != 0) { 
           var body = new Pyramid();
           body.color = [0.25, 0.25, 0.25, 1.0];
           body.textureNum = ROCKTEXTURE;
@@ -577,7 +584,7 @@ function drawMountains(map, positionMatrix)
             0,
             -y * 0.5
           );
-          //body.matrix.rotate(randomIntFromInterval(0, 89), 0, 1, 0);
+          body.matrix.rotate(randomIntFromInterval(0, 89), 0, 1, 0);
           mountainArray.push(body);
         }
       }
@@ -639,17 +646,17 @@ function renderTrees() {
 }
 
 function drawTrees(positionMatrix) {
-  for (let x = 0; x < 12; x++) {
-    for (let y = 0; y < 20; y++) {
-      if (randomIntFromInterval(0, 4) === 1) {  // 25% chance to generate a tree
+  for (let x = 0; x < 8; x++) {
+    for (let y = 0; y < 22; y++) {
+      if (randomIntFromInterval(0, 1) === 1) {
         
         let worldX = x * 5;  // Base world position for tree
         let worldZ = y * 5;
-        let rotation = randomIntFromInterval(0, 89);
 
         for (let layerIndex = 0; layerIndex < tree_map.length; layerIndex++) { // Iterate over tree_map layers
           let height = tree_map[layerIndex][0];  // Height level of this layer
           let boxArray = tree_map[layerIndex][1];  // Structure of the layer
+
           for (let row = 0; row < boxArray.length; row++) {
             for (let col = 0; col < boxArray[row].length; col++) {
               if (boxArray[row][col] !== 0) {  // Only create a cube if it's not empty
@@ -660,18 +667,18 @@ function drawTrees(positionMatrix) {
 
                 // Differentiate between trunk and leaves
                 if (boxArray[row][col] === 2) {
-                  body.color = [0.0, 0.2, 0.0, 1.0];  // Leaves
+                  body.color = [0.0, 0.35, 0.0, 1.0];  // Leaves
                   body.textureNum = COLOR;
                 }
 
                 body.matrix = new Matrix4(positionMatrix);
-
                 body.matrix.translate(
                   worldX + col - Math.floor(boxArray[row].length / 2), // Center X around trunk
                   height,  // Correct height for the tree
                   worldZ + row - Math.floor(boxArray.length / 2) // Center Z around trunk
                 );
-                body.matrix.rotate(rotation, 0, 1, 0);
+
+                body.matrix.scale(1.0, 1.0, 1.0);
                 trees.push(body);
               }
             }
@@ -746,11 +753,11 @@ var boat_map = [
     [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
     [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
     [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-    [0, 3, 1, 1, 1, 1, 1, 1, 1, 3, 0],
+    [0, 2, 1, 1, 1, 1, 1, 1, 1, 2, 0],
     [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-    [0, 3, 1, 1, 1, 1, 1, 1, 1, 3, 0],
+    [0, 2, 1, 1, 1, 1, 1, 1, 1, 2, 0],
     [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-    [0, 3, 1, 1, 1, 1, 1, 1, 1, 3, 0],
+    [0, 2, 1, 1, 1, 1, 1, 1, 1, 2, 0],
     [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
     [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
     [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
@@ -762,7 +769,7 @@ var boat_map = [
     [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
     [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
     [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
-    [0, 0, 1, 3, 1, 1, 1, 3, 1, 0, 0],
+    [0, 0, 1, 2, 1, 1, 1, 2, 1, 0, 0],
     [0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 0],
     [0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
     [0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
@@ -781,7 +788,7 @@ var boat_map = [
     [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
     [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
     [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
-    [0, 0, 1, 3, 1, 1, 1, 3, 1, 0, 0],
+    [0, 0, 1, 2, 1, 1, 1, 2, 1, 0, 0],
     [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
     [0],
     [0],
@@ -926,13 +933,13 @@ var boat_map = [
     [0],
     [0],
     [0],
-    [0, 0, 0, 3, 3, 2, 3, 3, 0, 0, 0],
+    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
     [0],
     [0],
     [0],
     [0],
     [0],
-    [0, 0, 0, 3, 3, 2, 3, 3, 0, 0, 0],
+    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
     [0],
     [0],
     [0],
@@ -967,10 +974,10 @@ function drawMap(map, positionMatrix) {
       for (let z = 0; z < boxArray[y].length; z++) {
         if (boxArray[y][z] != 0) { 
           var body = new Cube();
-          body.textureNum = WOODTEXTURECOLOR;
-          body.color = [0.1, 0.2, 0.1, 1.0];
+          body.textureNum = WOODTEXTURE;
 
           if (boxArray[y][z] == 2) {
+            body.textureNum = WOODTEXTURECOLOR;
             body.color = [0.0, 0.0, 0.0, 1.0];
           }
 
@@ -980,6 +987,7 @@ function drawMap(map, positionMatrix) {
           }
 
           body.matrix = new Matrix4(positionMatrix);
+          
           body.matrix.scale(0.6, 0.6, 0.6);
           body.matrix.translate(
             z - 4, // Adjust horizontal positioning
@@ -1000,9 +1008,9 @@ function randomIntFromInterval(min, max) { // min and max included
 
 let raindrops = [];
 function createRain() {
-  for (let i = 0; i < 8000; i++) {
-    let xPos = randomIntFromInterval(-2000, 2000);
-    let zPos = -400 + randomIntFromInterval(-3000, 2000);
+  for (let i = 0; i < 2000; i++) {
+    let xPos = randomIntFromInterval(-500, 500);
+    let zPos = randomIntFromInterval(-500, 500);
     let yPos = randomIntFromInterval(0, 300);
 
     var rainDrop = new Cube();

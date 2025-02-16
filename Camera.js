@@ -86,11 +86,7 @@ class Camera {
         this.at.set(this.eye);
         this.at.add(distancePrime);
 
-        console.log(
-            this.eye.elements, 
-            this.at.elements,
-            this.up.elements
-        );
+        //console.log(this.eye.elements, this.at.elements, this.up.elements);
     }
 
     panRight( angle = this.alpha ) {
