@@ -1008,9 +1008,9 @@ function randomIntFromInterval(min, max) { // min and max included
 
 let raindrops = [];
 function createRain() {
-  for (let i = 0; i < 2000; i++) {
-    let xPos = randomIntFromInterval(-500, 500);
-    let zPos = randomIntFromInterval(-500, 500);
+  for (let i = 0; i < 40000; i++) {
+    let xPos = randomIntFromInterval(-2000, 2000);
+    let zPos = randomIntFromInterval(-2000, 2000);
     let yPos = randomIntFromInterval(0, 300);
 
     var rainDrop = new Cube();
