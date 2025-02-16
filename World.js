@@ -234,7 +234,7 @@ let g_lowerArmAngle = 0;
 let g_upperArmAnimation;
 let g_lowerArmAnimation;
 
-let g_rainAnimation = true;
+let g_rainAnimation = false;
 
 let upperArmSlider, lowerArmSlider;
 
@@ -433,12 +433,9 @@ function main() {
   drawMountains(mountainRange, new Matrix4(mountain.matrix))
 
   var startTree = new Cube();
-  startTree.matrix.translate(-40, 0, -80);
+  startTree.matrix.translate(-45, 0, -80);
   startTree.renderfaster();
   drawTrees(new Matrix4(startTree.matrix));
-
-  createPirate([-8, -0.8, -6]);
-  createPirate([2, -0.6, 6]);
 
   requestAnimationFrame(tick);
 }
@@ -546,8 +543,8 @@ function renderAllShapes(ev) {
   boat1.matrix.rotate(90, 0, 1, 0);
   drawMap(boat_map, new Matrix4(boat1.matrix));
 
-  //renderDavyJones();
-  renderPirates();
+  renderDavyJones();
+  //renderPirates();
 
   var duration = performance.now() - startTime;
   sendToTextHTML(`ms: ${Math.floor(duration)} fps: ${Math.floor(10000/duration)}`, "numdot");
@@ -661,7 +658,7 @@ function renderTrees() {
 }
 
 function drawTrees(positionMatrix) {
-  for (let x = 0; x < 8; x++) {
+  for (let x = 0; x < 9; x++) {
     for (let y = 0; y < 22; y++) {
       if (randomIntFromInterval(0, 1) === 1) {
         
@@ -682,7 +679,7 @@ function drawTrees(positionMatrix) {
 
                 if (boxArray[row][col] === 2) { // Tree leaves
                   body.color = [0.0, 0.35, 0.0, 1.0];
-                  body.textureNum = TREETEXTURE;
+                  body.textureNum = TREETEXTURECOLOR;
                 }
 
                 body.matrix = new Matrix4(positionMatrix);
@@ -1618,7 +1615,6 @@ function createPirate(position)
   head.matrix.rotate(-g_headAnimation, 0, 1, 1);
   var headCoordinatesMat = new Matrix4(head.matrix);
   head.matrix.translate(-0.2, -0.51, -0.3);
-  var headCoordinatesMatrix = new Matrix4(head.matrix);
   head.matrix.scale(1.0, 0.6, 1.0);
   //head.renderfaster();
   pirateArray.push(head);
