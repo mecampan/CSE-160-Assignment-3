@@ -23,6 +23,7 @@ var FSHADER_SOURCE =`
   uniform sampler2D u_WoodTexture;
   uniform sampler2D u_WaterTexture;
   uniform sampler2D u_RockTexture;
+  uniform sampler2D u_TreeTexture;
   uniform int u_whichTexture;
   void main() {
     if (u_whichTexture == -2) {
@@ -59,6 +60,13 @@ var FSHADER_SOURCE =`
       vec4 textureColor = texture2D(u_RockTexture, v_UV);
       gl_FragColor = mix(textureColor, u_FragColor, 0.5); // Blend texture and color 50%
     }
+    else if (u_whichTexture == 8) {
+      gl_FragColor = texture2D(u_TreeTexture, v_UV);  // Use rock texture
+    }
+    else if (u_whichTexture == 9) {
+      vec4 textureColor = texture2D(u_TreeTexture, v_UV);
+      gl_FragColor = mix(textureColor, u_FragColor, 0.5); // Blend texture and color 50%
+    }
     else {
       gl_FragColor = vec4(1.0, 0.2, 0.1, 1.0);    // Error, put Redish tint
     }
@@ -75,6 +83,8 @@ const WATERTEXTURE = 4;
 const WATERTEXTURECOLOR = 5;
 const ROCKTEXTURE = 6;
 const ROCKTEXTURECOLOR = 7;
+const TREETEXTURE = 8;
+const TREETEXTURECOLOR = 9;
 
 //-----------------------
 let canvas;
@@ -90,6 +100,7 @@ let u_GlobalRotateMatrix;
 let u_Sampler;
 let u_WoodTexture;
 let u_RockTexture;
+let u_TreeTexture;
 let u_whichTexture;
 
 function setupWebGL() {
@@ -185,6 +196,13 @@ function connectVariablesToGLSL() {
     return;
   }
 
+  // Get the storage location of the u_TreeTexture
+  u_TreeTexture = gl.getUniformLocation(gl.program, 'u_TreeTexture');
+  if(!u_TreeTexture) {
+    console.log(`Failed to get the storage location of u_TreeTexture`);
+    return;
+  }
+
   // Get the storage location of the u_whichTexture
   u_whichTexture = gl.getUniformLocation(gl.program, 'u_whichTexture');
   if(!u_whichTexture) {
@@ -216,7 +234,9 @@ let g_lowerArmAngle = 0;
 let g_upperArmAnimation;
 let g_lowerArmAnimation;
 
-let angleSlider, tiltSlider, zoomSlider, upperArmSlider, lowerArmSlider;
+let g_rainAnimation = true;
+
+let upperArmSlider, lowerArmSlider;
 
 let musicPlaying = false;
 let musicPlayer = new Audio('hes_a_pirate.ogg');
@@ -226,24 +246,6 @@ if(musicPlayer === null) {
 musicPlayer.volume = 0.4
 
 function addActionsforHtmlUI() {
-  angleSlider = document.getElementById('angleSlider');
-  angleSlider.addEventListener('mousemove',  function() { g_globalAngle = this.value; renderAllShapes(); });
-  tiltSlider = document.getElementById('tiltSlider');
-  tiltSlider.addEventListener('mousemove',  function() { g_globaltiltAngle = this.value; renderAllShapes(); });
-  zoomSlider = document.getElementById('zoomSlider');
-  zoomSlider.addEventListener('mousemove',  function() { g_globalZoom = this.value / 100; renderAllShapes(); });
-
-  document.getElementById('resetCamera').onclick = function() { 
-    angleSlider.value = 0; 
-    tiltSlider.value = 0; 
-    zoomSlider.value = 50; 
-
-    g_globalAngle = 0;
-    g_globaltiltAngle = 0;
-    g_globalZoom = 0.5;
-
-    renderAllShapes(); 
-  };
 
   upperArmSlider = document.getElementById('upperArmSlider');
   upperArmSlider.addEventListener('mousemove',  function() { g_upperArmAngle = this.value; renderAllShapes(); });
@@ -258,6 +260,9 @@ function addActionsforHtmlUI() {
 
   document.getElementById('bodyAnimationButtonOn').onclick = function() { g_bodyAnimationOn = true; };
   document.getElementById('bodyAnimationButtonOff').onclick = function() { g_bodyAnimationOn = false; };
+
+  document.getElementById('rainButtonOn').onclick = function() { g_rainAnimation = true; };
+  document.getElementById('rainButtonOff').onclick = function() { g_rainAnimation = false; };
 
   document.getElementById('pirateMusicButton').onclick = function() {
     if (musicPlaying) {
@@ -410,6 +415,7 @@ function main() {
   initTextures('woodBlock.jpg', u_WoodTexture, WOODTEXTURE);
   initTextures('Water.jpg', u_WoodTexture, WATERTEXTURE);
   initTextures('Rock.jpg', u_RockTexture, ROCKTEXTURE);
+  initTextures('leaves.png', u_TreeTexture, TREETEXTURE);
 
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -621,30 +627,24 @@ let tree_map = [
     ]
   ],
   [ 2, [
-    [0, 0, 0],
-    [0, 1, 0],
-    [0, 0, 0],
+    [0, 2, 0],
+    [2, 1, 2],
+    [0, 2, 0],
     ]
   ],
   [ 3, [
-    [0, 0, 0],
-    [0, 1, 0],
-    [0, 0, 0],
+    [2, 2, 2],
+    [2, 2, 2],
+    [2, 2, 2],
     ]
   ],
   [ 4, [
-    [2, 2, 2],
-    [2, 2, 2],
-    [2, 2, 2],
-    ]
-  ],
-  [ 5, [
     [0, 2, 0],
     [2, 0, 2],
     [0, 2, 0],
     ]
   ],
-  [ 6, [
+  [ 5, [
     [0, 0, 0],
     [0, 2, 0],
     [0, 0, 0],
@@ -682,7 +682,7 @@ function drawTrees(positionMatrix) {
 
                 if (boxArray[row][col] === 2) { // Tree leaves
                   body.color = [0.0, 0.35, 0.0, 1.0];
-                  body.textureNum = COLOR;
+                  body.textureNum = TREETEXTURE;
                 }
 
                 body.matrix = new Matrix4(positionMatrix);
@@ -1045,21 +1045,24 @@ function createRain() {
 }
 
 function updateRain() {
-  for (let drop of raindrops) {
-    // If it reaches the bottom, reset to the top
-    if (drop.currHeight <= drop.low) {
-      drop.currHeight = drop.height; // Reset height
-      drop.matrix.setIdentity(); // Reset transformations
-      drop.matrix.scale(0.05, 0.5, 0.05);
-      drop.matrix.translate(0 + drop.xPos, drop.height, -50 + drop.zPos);
+  if(g_rainAnimation) 
+  {
+    for (let drop of raindrops) {
+      // If it reaches the bottom, reset to the top
+      if (drop.currHeight <= drop.low) {
+        drop.currHeight = drop.height; // Reset height
+        drop.matrix.setIdentity(); // Reset transformations
+        drop.matrix.scale(0.05, 0.5, 0.05);
+        drop.matrix.translate(0 + drop.xPos, drop.height, -50 + drop.zPos);
+      }
+      // Move down based on dropSpeed
+      else {
+        drop.matrix.translate(0, -3, 0); // Move down
+        drop.currHeight--; // Decrease height
+        drop.lastDropTime = g_seconds; // Update last drop time
+      }
+      drop.renderfaster();
     }
-    // Move down based on dropSpeed
-    else { 
-      drop.matrix.translate(0, -3, 0); // Move down
-      drop.currHeight--; // Decrease height
-      drop.lastDropTime = g_seconds; // Update last drop time
-    }
-    drop.renderfaster();
   }
 }
 
