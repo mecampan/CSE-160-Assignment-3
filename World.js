@@ -213,6 +213,9 @@ var g_eyeBlink = 1;
 let g_upperArmAngle = 0;
 let g_lowerArmAngle = 0;
 
+let g_upperArmAnimation;
+let g_lowerArmAnimation;
+
 let angleSlider, tiltSlider, zoomSlider, upperArmSlider, lowerArmSlider;
 
 let musicPlaying = false;
@@ -266,6 +269,7 @@ function addActionsforHtmlUI() {
     musicPlaying = !musicPlaying;
   };
 }
+
 
 let startingMouseX = 0;
 let dragging = false;
@@ -391,6 +395,9 @@ function sendTextureToTEXTURE0(image, connected, num) {
 }
 
 
+// MAIN
+// -----------------------------------------------------------------
+// -----------------------------------------------------------------
 let camera;
 function main() {
 
@@ -424,8 +431,13 @@ function main() {
   startTree.renderfaster();
   drawTrees(new Matrix4(startTree.matrix));
 
+  createPirate([-8, -0.8, -6]);
+  createPirate([2, -0.6, 6]);
+
   requestAnimationFrame(tick);
 }
+
+
 
 var g_startTime = performance.now() / 1000.0;
 var g_seconds = performance.now()/1000.0-g_startTime;
@@ -442,6 +454,7 @@ function tick() {
   requestAnimationFrame(tick);
 }
 
+//-------------------------------------
 function updateAnimationAngles() {
 
   if(g_bodyAnimationOn){
@@ -527,6 +540,9 @@ function renderAllShapes(ev) {
   boat1.matrix.rotate(90, 0, 1, 0);
   drawMap(boat_map, new Matrix4(boat1.matrix));
 
+  //renderDavyJones();
+  renderPirates();
+
   var duration = performance.now() - startTime;
   sendToTextHTML(`ms: ${Math.floor(duration)} fps: ${Math.floor(10000/duration)}`, "numdot");
 }
@@ -577,7 +593,6 @@ function drawMountains(map, positionMatrix) {
           body.color = [0.25, 0.25, 0.25, 1.0];
           body.textureNum = ROCKTEXTURE;
 
-          // Apply position transformation before specific translations
           body.matrix = new Matrix4(positionMatrix);
           body.matrix.translate(
             z * 0.4,
@@ -650,24 +665,23 @@ function drawTrees(positionMatrix) {
     for (let y = 0; y < 22; y++) {
       if (randomIntFromInterval(0, 1) === 1) {
         
-        let worldX = x * 5;  // Base world position for tree
+        let worldX = x * 5;
         let worldZ = y * 5;
 
-        for (let layerIndex = 0; layerIndex < tree_map.length; layerIndex++) { // Iterate over tree_map layers
-          let height = tree_map[layerIndex][0];  // Height level of this layer
-          let boxArray = tree_map[layerIndex][1];  // Structure of the layer
+        for (let layerIndex = 0; layerIndex < tree_map.length; layerIndex++) { 
+          let height = tree_map[layerIndex][0];  
+          let boxArray = tree_map[layerIndex][1]; 
 
           for (let row = 0; row < boxArray.length; row++) {
             for (let col = 0; col < boxArray[row].length; col++) {
-              if (boxArray[row][col] !== 0) {  // Only create a cube if it's not empty
+              if (boxArray[row][col] !== 0) { 
                 
                 var body = new Cube();
-                body.textureNum = WOODTEXTURECOLOR;
-                body.color = [0.0, 0.0, 0.0, 1.0];  // Leaves
+                body.textureNum = WOODTEXTURECOLOR; // Tree trunk
+                body.color = [0.0, 0.0, 0.0, 1.0]; 
 
-                // Differentiate between trunk and leaves
-                if (boxArray[row][col] === 2) {
-                  body.color = [0.0, 0.35, 0.0, 1.0];  // Leaves
+                if (boxArray[row][col] === 2) { // Tree leaves
+                  body.color = [0.0, 0.35, 0.0, 1.0];
                   body.textureNum = COLOR;
                 }
 
@@ -753,11 +767,11 @@ var boat_map = [
     [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
     [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
     [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-    [0, 2, 1, 1, 1, 1, 1, 1, 1, 2, 0],
+    [0, 3, 1, 1, 1, 1, 1, 1, 1, 3, 0],
     [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-    [0, 2, 1, 1, 1, 1, 1, 1, 1, 2, 0],
+    [0, 3, 1, 1, 1, 1, 1, 1, 1, 3, 0],
     [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-    [0, 2, 1, 1, 1, 1, 1, 1, 1, 2, 0],
+    [0, 3, 1, 1, 1, 1, 1, 1, 1, 3, 0],
     [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
     [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
     [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
@@ -769,7 +783,7 @@ var boat_map = [
     [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
     [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
     [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
-    [0, 0, 1, 2, 1, 1, 1, 2, 1, 0, 0],
+    [0, 0, 1, 3, 1, 1, 1, 3, 1, 0, 0],
     [0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 0],
     [0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
     [0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
@@ -788,7 +802,7 @@ var boat_map = [
     [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
     [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
     [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
-    [0, 0, 1, 2, 1, 1, 1, 2, 1, 0, 0],
+    [0, 0, 1, 3, 1, 1, 1, 3, 1, 0, 0],
     [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
     [0],
     [0],
@@ -849,7 +863,7 @@ var boat_map = [
     [0],
     [0],
     [0],
-    [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
+    [0, 0, 0, 3, 3, 2, 3, 3, 0, 0, 0],
     [0],
     [0],
     [0],
@@ -861,13 +875,13 @@ var boat_map = [
     [0],
     [0],
     [0],
-    [0, 0, 0, 3, 3, 2, 3, 3, 0, 0, 0],
+    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
     [0],
     [0],
     [0],
     [0],
     [0],
-    [0, 0, 0, 3, 3, 2, 3, 3, 0, 0, 0],
+    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
     [0],
     [0],
     [0],
@@ -915,13 +929,13 @@ var boat_map = [
     [0],
     [0],
     [0],
-    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
+    [0, 3, 3, 3, 3, 2, 3, 3, 3, 3, 0],
     [0],
     [0],
     [0],
     [0],
     [0],
-    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
+    [0, 3, 3, 3, 3, 2, 3, 3, 3, 3, 0],
     [0],
     [0],
     [0],
@@ -933,13 +947,13 @@ var boat_map = [
     [0],
     [0],
     [0],
-    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
+    [0, 3, 3, 3, 3, 2, 3, 3, 3, 3, 0],
     [0],
     [0],
     [0],
     [0],
     [0],
-    [0, 0, 3, 3, 3, 2, 3, 3, 3, 0, 0],
+    [0, 3, 3, 3, 3, 2, 3, 3, 3, 3, 0],
     [0],
     [0],
     [0],
@@ -974,7 +988,9 @@ function drawMap(map, positionMatrix) {
       for (let z = 0; z < boxArray[y].length; z++) {
         if (boxArray[y][z] != 0) { 
           var body = new Cube();
-          body.textureNum = WOODTEXTURE;
+          body.textureNum = WOODTEXTURECOLOR;
+          body.color = [0.1, 0.1, 0.1, 1.0];
+
 
           if (boxArray[y][z] == 2) {
             body.textureNum = WOODTEXTURECOLOR;
@@ -1008,7 +1024,7 @@ function randomIntFromInterval(min, max) { // min and max included
 
 let raindrops = [];
 function createRain() {
-  for (let i = 0; i < 40000; i++) {
+  for (let i = 0; i < 30000; i++) {
     let xPos = randomIntFromInterval(-2000, 2000);
     let zPos = randomIntFromInterval(-2000, 2000);
     let yPos = randomIntFromInterval(0, 300);
@@ -1045,4 +1061,787 @@ function updateRain() {
     }
     drop.renderfaster();
   }
+}
+
+
+// Davy Jones
+function drawTentacle(attachedMat, pos, rotation, segments, delay) {
+  var prevSegment = attachedMat;
+  var delayFactor = delay;
+  var backDistance = pos[2] / 4;
+
+  for (let i = 0; i < segments; i++) {
+    var tentacle = new Cube();
+    tentacle.color = [0.2 - (i * 0.05) + backDistance, 0.9 - (i * 0.05) + backDistance, 0.8 - (i * 0.05) + backDistance, 1.0];
+    tentacle.matrix = prevSegment;
+    if(i === 0) {
+      tentacle.matrix.translate(pos[0], pos[1], pos[2]);
+      tentacle.matrix.scale(0.15, 0.25, 0.15);
+    }
+    else {
+      tentacle.matrix.translate(0.02, -0.8, 0.001);
+      tentacle.matrix.scale(0.9, 0.9, 1.0);
+    }
+
+    if(g_faceAnimation) {
+      var waveMotion = Math.sin(g_seconds - i * delayFactor) * 0.1;
+      tentacle.matrix.rotate(rotation * Math.sin(g_seconds - i * delayFactor) * 0.1, 0, 0, 1);
+      tentacle.matrix.translate(waveMotion / 2, 0, 0); 
+    }
+
+    tentacle.render();
+    prevSegment = new Matrix4(tentacle.matrix);
+  }
+}
+
+pirateArray = [];
+function renderPirates()
+{
+  for(let i = 0; i < pirateArray.length; i++) 
+    {
+      pirateArray[i].renderfaster();
+    }
+}
+
+function renderDavyJones() 
+{
+  var darkerColor = 0.05;
+  var clothesColor = [0.16 - darkerColor, 0.11 - darkerColor, 0.05 - darkerColor, 1.0];  
+
+  // Body if there is time
+  upperBody = new Pyramid();
+  upperBody.color = clothesColor;
+  upperBody.matrix.translate(5, 1.8, -26.5);
+  upperBody.matrix.rotate(-90, 0, 1, 0);
+  upperBody.matrix.scale(0.3, 0.3, 0.3);
+  var bodyCoordinatesMat = new Matrix4(upperBody.matrix);
+  upperBody.matrix.translate(1.15, -0.5, -0.3);
+  upperBody.matrix.rotate(180, 0, 0, 1);
+  upperBody.matrix.scale(1.8, 2.6, 0.5);
+  upperBody.renderfaster();
+
+  neck = new Pyramid();
+  neck.color = clothesColor;
+  neck.matrix.matrix = new Matrix4(bodyCoordinatesMat)
+  neck.matrix.translate(-0.5, -0.7, -0.33);
+  neck.matrix.scale(1.5, 1.0, 0.5);
+  neck.renderfaster();  
+  
+  var upperBodyAbdomen = new Cube();
+  upperBodyAbdomen.color = clothesColor;
+  upperBodyAbdomen.matrix = new Matrix4(bodyCoordinatesMat)
+  upperBodyAbdomen.matrix.translate(-0.25, -1.8, -0.3);
+  upperBodyAbdomen.matrix.scale(1.0, 1.3, 0.5);
+  upperBodyAbdomen.renderfaster();
+
+  // -------------------------
+  var leftUpperArm = new Cube();
+  leftUpperArm.color = clothesColor;
+  leftUpperArm.matrix = new Matrix4(bodyCoordinatesMat)
+  leftUpperArm.matrix.translate(-0.9, -1.5, -0.35);
+  leftUpperArm.matrix.rotate(-20, 0, 0, 1);
+  leftUpperArm.matrix.rotate(g_upperArmAnimation, 1, 1, 0);
+  leftArmMatrixCoor = new Matrix4(leftUpperArm.matrix)
+  leftUpperArm.matrix.scale(0.4, 1.0, 0.4);
+  leftUpperArm.renderfaster();
+
+  var leftForearm = new Cube();
+  leftForearm.color = clothesColor;
+  leftForearm.matrix = new Matrix4(leftArmMatrixCoor)
+  leftForearm.matrix.rotate(g_lowerArmAnimation, 1, 0, 0);
+  leftForearm.matrix.translate(0.0, 0.3, -0.2);
+  leftForearm.matrix.rotate(-120, 1, 0, 0);
+  leftForearmMatrixCoor = new Matrix4(leftForearm.matrix);
+  leftForearm.matrix.scale(0.4, 1.0, 0.4);
+  leftForearm.renderfaster();
+
+  var sword = new Tetrahedron();
+  sword.color = [0.71, 0.71, 0.71, 1.0];
+  sword.matrix = new Matrix4(leftForearmMatrixCoor)
+  sword.matrix.translate(0.1, 1.0, 0.0);
+  sword.matrix.rotate(90, 1, 0, 0);
+  sword.matrix.scale(0.1, 3.0, 0.1);
+  //sword.renderfaster();
+  
+  // -------------------------
+  var rightUpperArm = new Cube();
+  rightUpperArm.color = clothesColor;
+  rightUpperArm.matrix = new Matrix4(bodyCoordinatesMat)
+  rightUpperArm.matrix.scale(-1.0, 1.0, 1.0);
+  rightUpperArm.matrix.translate(-1.4, -1.5, -0.35);
+  rightUpperArm.matrix.rotate(-20, 0, 0, 1);
+  rightUpperArm.matrix.rotate(g_upperArmAnimation, 1, 1, 0);
+  rightArmMatrixCoor = new Matrix4(rightUpperArm.matrix)
+  rightUpperArm.matrix.scale(0.4, 1.0, 0.4);
+  rightUpperArm.renderfaster();
+
+  var rightForearm = new Cube();
+  rightForearm.color = clothesColor;
+  rightForearm.matrix.rotate(g_lowerArmAnimation, 0, 1, 0);
+  rightForearm.matrix = new Matrix4(rightArmMatrixCoor)
+  rightForearm.matrix.translate(0.0, 0.3, -0.2);
+  rightForearm.matrix.rotate(-120, 1, 0, 0);
+  rightForearm.matrix.scale(0.4, 1.0, 0.4);
+  rightForearm.renderfaster();
+
+  // ------------------------
+  var lowerBody = new Pyramid();
+  lowerBody.color = clothesColor;
+  var lowerBodyCoordinatesMat = new Matrix4(lowerBody.matrix);
+  lowerBody.matrix.translate(-0.5, -2.2, -0.1);
+  lowerBody.matrix.scale(1.5, 2.6, 0.7);
+  lowerBody.renderfaster();
+  
+  var rightUpperLeg = new Cube();
+  rightUpperLeg.color = clothesColor;
+  rightUpperLeg.matrix = new Matrix4(bodyCoordinatesMat)
+  rightUpperLeg.matrix.scale(-1.0, 1.0, 1.0);
+  rightUpperLeg.matrix.translate(-0.8, -2.9, -0.35);
+  rightUpperLeg.matrix.rotate(0, 0, 0, 1);
+  rightLegMatrixCoor = new Matrix4(rightUpperLeg.matrix)
+  rightUpperLeg.matrix.scale(0.5, 1.0, 0.4);
+  rightUpperLeg.renderfaster();
+
+  var rightLowerLeg = new Cube();
+  rightLowerLeg.color = clothesColor;
+  rightLowerLeg.matrix = new Matrix4(rightLegMatrixCoor)
+  rightLowerLeg.matrix.translate(0.0, 0.3, -0.4);
+  rightLowerLeg.matrix.rotate(-180, 1, 0, 0);
+  rightLowerLeg.matrix.scale(0.5, 1.0, 0.4);
+  rightLowerLeg.renderfaster();
+
+  var leftUpperLeg = new Cube();
+  leftUpperLeg.color = clothesColor;
+  leftUpperLeg.matrix = new Matrix4(bodyCoordinatesMat)
+  leftUpperLeg.matrix.translate(-0.3, -2.9, -0.35);
+  leftUpperLeg.matrix.rotate(0, 0, 0, 1);
+  leftLegMatrixCoor = new Matrix4(leftUpperLeg.matrix)
+  leftUpperLeg.matrix.scale(0.5, 1.0, 0.4);
+  leftUpperLeg.renderfaster();
+
+  var leftLowerLeg = new Cube();
+  leftLowerLeg.color = clothesColor;
+  leftLowerLeg.matrix = new Matrix4(leftLegMatrixCoor)
+  leftLowerLeg.matrix.translate(0.0, 0.3, -0.4);
+  leftLowerLeg.matrix.rotate(-180, 1, 0, 0);
+  leftLowerLeg.matrix.scale(0.5, 1.0, 0.4);
+  leftLowerLeg.renderfaster();  
+
+  // Head
+  var head = new Cube();
+  head.color = [0.22, 0.58, 0.5, 1.0];
+  head.matrix = new Matrix4(bodyCoordinatesMat);
+  head.matrix.scale(0.7, 0.7, 0.7);
+  head.matrix.rotate(-g_headAnimation, 0, 1, 1);
+  var headCoordinatesMat = new Matrix4(head.matrix);
+  head.matrix.translate(-0.2, -0.51, -0.3);
+  var headCoordinatesMatrix = new Matrix4(head.matrix);
+  head.matrix.scale(1.0, 0.6, 1.0);
+  head.renderfaster();
+
+  // Middle Face Tentacles
+  var noseBridgeLeft= new Cube();
+  noseBridgeLeft.color = [0.1, 0.7, 0.6, 1.0];
+  noseBridgeLeft.matrix = new Matrix4(headCoordinatesMat);
+  noseBridgeLeft.matrix.translate(0.12, -0.25, -1.27);
+  noseBridgeLeft.matrix.rotate(-65, 0, 0, 1);
+  noseBridgeLeft.matrix.scale(0.05, 0.25, 0.11);
+  noseBridgeLeft.matrix.scale(1.5, 0.8, 0.7);
+  noseBridgeLeft.matrix.rotate(-10, 0, 0, 1);
+  noseBridgeLeft.renderfaster();
+
+  var noseBridgeRight = new Cube();
+  noseBridgeRight.color = [0.1, 0.7, 0.6, 1.0];
+  noseBridgeRight.matrix = new Matrix4(headCoordinatesMat);
+  noseBridgeRight.matrix.scale(-1.0, 1.0, 1.0);
+  noseBridgeRight.matrix.translate(-0.48, -0.25, -1.27);
+  noseBridgeRight.matrix.rotate(-65, 0, 0, 1);
+  noseBridgeRight.matrix.scale(0.05, 0.25, 0.11);
+  noseBridgeRight.matrix.scale(1.5, 0.8, 0.7);
+  noseBridgeRight.matrix.rotate(-10, 0, 0, 1);
+  noseBridgeRight.renderfaster();
+
+  drawTentacle(new Matrix4(headCoordinatesMatrix), [0.25, 0.0, -0.9], 15, 7, 0.2 + Math.sin(g_seconds) / 10);
+  drawTentacle(new Matrix4(headCoordinatesMatrix), [0.6, 0.0, -0.9], 15, 7, 0.2 + Math.sin(g_seconds) / 10);
+
+  // Beard Tentacles
+  drawTentacle(new Matrix4(headCoordinatesMatrix), [0.37, -0.2, -0.88], 15, 8, 0.5 + Math.sin(g_seconds) / 10);
+  drawTentacle(new Matrix4(headCoordinatesMatrix), [0.53, -0.2, -0.88], 15, 8, 0.5 + Math.sin(g_seconds) / 10);
+
+  // Left beard Tentacles hieght decreasing
+  drawTentacle(new Matrix4(headCoordinatesMatrix), [0.25, -0.25, -0.86], 15, 3, 0.4 + Math.sin(g_seconds) / 10);
+  drawTentacle(new Matrix4(headCoordinatesMatrix), [0.15, -0.15, -0.86], 15, 3, 0.3 + Math.sin(g_seconds) / 10);
+  drawTentacle(new Matrix4(headCoordinatesMatrix), [0.0, -0.1, -0.86], 15, 2, 0.2 + Math.sin(g_seconds) / 10);
+
+  // Right beard Tentacles hieght decreasing
+  drawTentacle(new Matrix4(headCoordinatesMatrix), [0.6, -0.25, -0.86], 15, 3, 0.4 + Math.sin(g_seconds) / 10);
+  drawTentacle(new Matrix4(headCoordinatesMatrix), [0.75, -0.15, -0.86], 15, 3, 0.3 + Math.sin(g_seconds) / 10);
+  drawTentacle(new Matrix4(headCoordinatesMatrix), [0.86, -0.1, -0.86], 15, 2, 0.2 + Math.sin(g_seconds) / 10);
+
+  //Eyes
+  var leftEye = new Cube();
+  leftEye.color = [0.0, 0.0, 0.0, 1.0];
+  leftEye.matrix = new Matrix4(headCoordinatesMat);
+  leftEye.matrix.translate(0.05, -0.2, -1.21);
+  leftEye.matrix.scale(0.1, 0.15, 0.1);
+  leftEye.matrix.scale(1.0, g_eyeBlink, 1.0);
+  leftEye.renderfaster();
+
+  var leftEyebrow = new Cube();
+  leftEyebrow.color = [0.12, 0.48, 0.4, 1.0];
+  leftEyebrow.matrix = new Matrix4(headCoordinatesMat);
+  leftEyebrow.matrix.translate(0.2, -0.12, -1.21);
+  leftEyebrow.matrix.rotate(65, 0, 0, 1);
+  leftEyebrow.matrix.scale(0.05, 0.25, 0.11);
+  leftEyebrow.renderfaster();
+
+  var leftEyeSunken = new Cube();
+  leftEyeSunken.color = [0.3, 0.48, 0.37, 1.0];
+  leftEyeSunken.matrix = new Matrix4(headCoordinatesMat);
+  leftEyeSunken.matrix.translate(0.22, -0.27, -1.199);
+  leftEyeSunken.matrix.rotate(30, 0, 0, 1);
+  leftEyeSunken.matrix.scale(0.15, 0.25, 0.11);
+  leftEyeSunken.matrix.rotate(65, 0, 0, 1);
+  //leftEyeSunken.renderfaster();
+
+  var rightEye = new Cube();
+  rightEye.color = [0.0, 0.0, 0.0, 1.0];
+  rightEye.matrix = new Matrix4(headCoordinatesMat);
+  rightEye.matrix.translate(0.45, -0.2, -1.21);
+  rightEye.matrix.scale(0.1, 0.15, 0.1);
+  rightEye.matrix.scale(1.0, g_eyeBlink, 1.0);
+  rightEye.renderfaster();  
+
+  var rightEyebrow = new Cube();
+  rightEyebrow.color = [0.12, 0.48, 0.4, 1.0];
+  rightEyebrow.matrix = new Matrix4(headCoordinatesMat);
+  rightEyebrow.matrix.scale(-1.0, 1.0, 1.0);  
+  rightEyebrow.matrix.translate(-0.4, -0.12, -1.21);
+  rightEyebrow.matrix.rotate(65, 0, 0, 1);
+  rightEyebrow.matrix.scale(0.05, 0.25, 0.11);
+  rightEyebrow.renderfaster();
+
+  var rightEyeSunken = new Cube();
+  rightEyeSunken.color = [0.3, 0.48, 0.37, 1.0];
+  rightEyeSunken.matrix = new Matrix4(headCoordinatesMat);
+  rightEyeSunken.matrix.scale(-1.0, 1.0, 1.0);  
+  rightEyeSunken.matrix.translate(-0.4, -0.27, -1.199);
+  rightEyeSunken.matrix.rotate(30, 0, 0, 1);
+  rightEyeSunken.matrix.scale(0.15, 0.25, 0.11);
+  rightEyeSunken.matrix.rotate(65, 0, 0, 1);
+  //rightEyeSunken.renderfaster();
+
+  // Mouth
+  var mouthLeft = new Cube();
+  mouthLeft.color = [0.0, 0.0, 0.0, 1.0];
+  mouthLeft.matrix = new Matrix4(headCoordinatesMat);
+  mouthLeft.matrix.translate(0.21, -0.32, -1.27);
+  mouthLeft.matrix.rotate(-65, 0, 0, 1);
+  mouthLeft.matrix.scale(0.05, 0.25, 0.11);
+  mouthLeft.matrix.scale(0.4, 0.4, 0.4);
+  mouthLeft.renderfaster();
+
+  var mouthRight = new Cube();
+  mouthRight.color = [0.0, 0.0, 0.0, 1.0];
+  mouthRight.matrix = new Matrix4(headCoordinatesMat);
+  mouthRight.matrix.scale(-1.0, 1.0, 1.0);  
+  mouthRight.matrix.translate(-0.4, -0.32, -1.27);
+  mouthRight.matrix.rotate(-65, 0, 0, 1);
+  mouthRight.matrix.scale(0.05, 0.25, 0.11);
+  mouthRight.matrix.scale(0.4, 0.4, 0.4);
+  mouthRight.renderfaster();  
+
+  // ----------------------------
+  // Davy Jones Hat
+  var hatColor = [0.08, 0.09, 0.15, 1.0];
+  var hatBase = new Cube();
+  hatBase.color = [0.67, 0.61, 0.44, 1.0];
+  hatBase.matrix = new Matrix4(headCoordinatesMat);
+  hatBase.matrix.translate(-0.201, 0.0, -0.27);
+  hatBaseCoorMatrix = new Matrix4(hatBase.matrix);
+  hatBase.matrix.scale(1.002, 0.311, 0.8);
+  hatBase.matrix.translate(0.0, 0.1, -0.32);
+  hatBase.renderfaster();
+
+  var hatTop = new Cube();
+  hatTop.color = hatColor;
+  hatTop.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatTop.matrix.translate(-0.01, 0.35, -0.9);
+  hatTop.matrix.rotate(138, 1, 0, 0);
+  hatTop.matrix.scale(1.03, 1.1, 0.5)
+  hatTop.renderfaster();
+
+  var hatBottom = new Cube();
+  hatBottom.color = hatColor;
+  hatBottom.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatBottom.matrix.translate(0.00, 0.35, -0.9);
+  hatBottom.matrix.rotate(138, 1, 0, 0);
+  hatBottom.matrix.scale(1.03, 1.15, 0.4)
+  hatBottom.matrix.rotate(17, 1, 0, 0);
+  hatBottom.renderfaster();
+
+  // ----------------------------
+  var hatFront = new Tetrahedron();
+  hatFront.color = hatColor;
+  hatFront.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatFront.matrix.scale(-1.0, 1.0, 1.0)
+  hatFront.matrix.translate(.39, 0.9, -1.05);
+  hatFront.matrix.rotate(223, 1, 0, 0);
+  hatFront.matrix.rotate(95, 0, 1, 0);
+  hatFront.matrix.rotate(0, 0, 0, 1);
+  hatFront.matrix.scale(1.5, 0.8, 1.8)
+  //hatFront.renderfaster();
+
+  var hatFrontR = new Tetrahedron();
+  hatFrontR.color = hatColor;
+  hatFrontR.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatFrontR.matrix.translate(1.39, 0.9, -1.05);
+  hatFrontR.matrix.rotate(223, 1, 0, 0);
+  hatFrontR.matrix.rotate(95, 0, 1, 0);
+  hatFrontR.matrix.rotate(0, 0, 0, 1);
+  hatFrontR.matrix.scale(1.5, 0.8, 1.8)
+  //hatFrontR.renderfaster();
+
+  // ----------------------------
+  var hatBack = new Tetrahedron();
+  hatBack.color = hatColor;
+  hatBack.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatBack.matrix.translate(1.0, 0.25, -0.7);
+  hatBack.matrix.rotate(292, 1, 0, 0);
+  hatBack.matrix.rotate(341, 0, 1, 0);
+  hatBack.matrix.rotate(244, 0, 0, 1);
+  hatBack.matrix.scale(1.3, 1.2, 0.6)
+  //hatBack.renderfaster();
+
+  var hatBack2 = new Tetrahedron();
+  hatBack2.color = hatColor;
+  hatBack2.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatBack2.matrix.scale(-1.0, 1.0, 1.0)
+  hatBack2.matrix.translate(0.0, 0.25, -0.7);
+  hatBack2.matrix.rotate(292, 1, 0, 0);
+  hatBack2.matrix.rotate(341, 0, 1, 0);
+  hatBack2.matrix.rotate(244, 0, 0, 1);
+  hatBack2.matrix.scale(1.3, 1.2, 0.6)
+  //hatBack2.renderfaster();
+
+  // Gold Trim
+  // Ugly way to do it, but tired and can't think of a better way
+  var trimColor = [0.85, 0.75, 0.46, 1.0];
+  hatFrontL = new Tetrahedron();
+  hatFrontL.color = trimColor;
+  hatFrontL.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatFrontL.matrix.scale(-1.0, 1.0, 1.0)
+  hatFrontL.matrix.translate(.41, 0.92, -1.08);
+  hatFrontL.matrix.rotate(223, 1, 0, 0);
+  hatFrontL.matrix.rotate(95, 0, 1, 0);
+  hatFrontL.matrix.rotate(0, 0, 0, 1);
+  hatFrontL.matrix.scale(1.5, 0.8, 1.8)
+  //hatFrontL.renderfaster();
+
+  hatFrontL = new Tetrahedron();
+  hatFrontL.color = hatColor;
+  hatFrontL.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatFrontL.matrix.scale(-1.0, 1.0, 1.0)
+  hatFrontL.matrix.translate(.42, 0.9, -1.09);
+  hatFrontL.matrix.rotate(223, 1, 0, 0);
+  hatFrontL.matrix.rotate(95, 0, 1, 0);
+  hatFrontL.matrix.rotate(0, 0, 0, 1);
+  hatFrontL.matrix.scale(1.5, 0.8, 1.8)
+  //hatFrontL.renderfaster();
+
+  //----------------------------
+  hatFrontR = new Tetrahedron();
+  hatFrontR.color = trimColor;
+  hatFrontR.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatFrontR.matrix.translate(1.41, 0.92, -1.08);
+  hatFrontR.matrix.rotate(223, 1, 0, 0);
+  hatFrontR.matrix.rotate(95, 0, 1, 0);
+  hatFrontR.matrix.rotate(0, 0, 0, 1);
+  hatFrontR.matrix.scale(1.5, 0.8, 1.8)
+  //hatFrontR.renderfaster();
+
+  hatFrontR = new Tetrahedron();
+  hatFrontR.color = hatColor;
+  hatFrontR.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatFrontR.matrix.translate(1.42, 0.9, -1.09);
+  hatFrontR.matrix.rotate(223, 1, 0, 0);
+  hatFrontR.matrix.rotate(95, 0, 1, 0);
+  hatFrontR.matrix.rotate(0, 0, 0, 1);
+  hatFrontR.matrix.scale(1.5, 0.8, 1.8)
+  //hatFrontR.renderfaster();
+}
+
+function createPirate(position) 
+{
+  var darkerColor = 0.05;
+  var clothesColor = [0.16 - darkerColor, 0.11 - darkerColor, 0.05 - darkerColor, 1.0];  
+
+  // Body if there is time
+  upperBody = new Pyramid();
+  upperBody.color = clothesColor;
+  upperBody.matrix.translate(position[0] + 5, position[1] + 1.8, position[2] - 26.5);
+  upperBody.matrix.rotate(-90, 0, 1, 0);
+  upperBody.matrix.scale(0.3, 0.3, 0.3);
+  var bodyCoordinatesMat = new Matrix4(upperBody.matrix);
+  upperBody.matrix.translate(1.15, -0.5, -0.3);
+  upperBody.matrix.rotate(180, 0, 0, 1);
+  upperBody.matrix.scale(1.8, 2.6, 0.5);
+  //upperBody.renderfaster();
+  pirateArray.push(upperBody);
+
+  neck = new Pyramid();
+  neck.color = clothesColor;
+  neck.matrix.matrix = new Matrix4(bodyCoordinatesMat)
+  neck.matrix.translate(-0.5, -0.7, -0.33);
+  neck.matrix.scale(1.5, 1.0, 0.5);
+  //neck.renderfaster();  
+  pirateArray.push(neck);
+
+  var upperBodyAbdomen = new Cube();
+  upperBodyAbdomen.color = clothesColor;
+  upperBodyAbdomen.matrix = new Matrix4(bodyCoordinatesMat)
+  upperBodyAbdomen.matrix.translate(-0.25, -1.8, -0.3);
+  upperBodyAbdomen.matrix.scale(1.0, 1.3, 0.5);
+  //upperBodyAbdomen.renderfaster();
+  pirateArray.push(upperBodyAbdomen);
+
+  // -------------------------
+  var leftUpperArm = new Cube();
+  leftUpperArm.color = clothesColor;
+  leftUpperArm.matrix = new Matrix4(bodyCoordinatesMat)
+  leftUpperArm.matrix.translate(-0.9, -1.5, -0.35);
+  leftUpperArm.matrix.rotate(-20, 0, 0, 1);
+  leftUpperArm.matrix.rotate(g_upperArmAnimation, 1, 1, 0);
+  leftArmMatrixCoor = new Matrix4(leftUpperArm.matrix)
+  leftUpperArm.matrix.scale(0.4, 1.0, 0.4);
+  //leftUpperArm.renderfaster();
+  pirateArray.push(leftUpperArm);
+
+  var leftForearm = new Cube();
+  leftForearm.color = clothesColor;
+  leftForearm.matrix = new Matrix4(leftArmMatrixCoor)
+  leftForearm.matrix.rotate(g_lowerArmAnimation, 1, 0, 0);
+  leftForearm.matrix.translate(0.0, 0.3, -0.2);
+  leftForearm.matrix.rotate(-120, 1, 0, 0);
+  leftForearmMatrixCoor = new Matrix4(leftForearm.matrix);
+  leftForearm.matrix.scale(0.4, 1.0, 0.4);
+  //leftForearm.renderfaster();
+  pirateArray.push(leftForearm);
+
+  var sword = new Tetrahedron();
+  sword.color = [0.71, 0.71, 0.71, 1.0];
+  sword.matrix = new Matrix4(leftForearmMatrixCoor)
+  sword.matrix.translate(0.1, 1.0, 0.0);
+  sword.matrix.rotate(90, 1, 0, 0);
+  sword.matrix.scale(0.1, 3.0, 0.1);
+  //sword.renderfaster();
+  
+  // -------------------------
+  var rightUpperArm = new Cube();
+  rightUpperArm.color = clothesColor;
+  rightUpperArm.matrix = new Matrix4(bodyCoordinatesMat)
+  rightUpperArm.matrix.scale(-1.0, 1.0, 1.0);
+  rightUpperArm.matrix.translate(-1.4, -1.5, -0.35);
+  rightUpperArm.matrix.rotate(-20, 0, 0, 1);
+  rightUpperArm.matrix.rotate(g_upperArmAnimation, 1, 1, 0);
+  rightArmMatrixCoor = new Matrix4(rightUpperArm.matrix)
+  rightUpperArm.matrix.scale(0.4, 1.0, 0.4);
+  //rightUpperArm.renderfaster();
+  pirateArray.push(rightUpperArm);
+
+  var rightForearm = new Cube();
+  rightForearm.color = clothesColor;
+  rightForearm.matrix.rotate(g_lowerArmAnimation, 0, 1, 0);
+  rightForearm.matrix = new Matrix4(rightArmMatrixCoor)
+  rightForearm.matrix.translate(0.0, 0.3, -0.2);
+  rightForearm.matrix.rotate(-120, 1, 0, 0);
+  rightForearm.matrix.scale(0.4, 1.0, 0.4);
+  //rightForearm.renderfaster();
+  pirateArray.push(rightForearm);
+
+  // ------------------------
+  var lowerBody = new Pyramid();
+  lowerBody.color = clothesColor;
+  var lowerBodyCoordinatesMat = new Matrix4(lowerBody.matrix);
+  lowerBody.matrix.translate(-0.5, -2.2, -0.1);
+  lowerBody.matrix.scale(1.5, 2.6, 0.7);
+  //lowerBody.renderfaster();
+  pirateArray.push(lowerBody);
+
+  var rightUpperLeg = new Cube();
+  rightUpperLeg.color = clothesColor;
+  rightUpperLeg.matrix = new Matrix4(bodyCoordinatesMat)
+  rightUpperLeg.matrix.scale(-1.0, 1.0, 1.0);
+  rightUpperLeg.matrix.translate(-0.8, -2.9, -0.35);
+  rightUpperLeg.matrix.rotate(0, 0, 0, 1);
+  rightLegMatrixCoor = new Matrix4(rightUpperLeg.matrix)
+  rightUpperLeg.matrix.scale(0.5, 1.0, 0.4);
+  rightUpperLeg.renderfaster();
+  //pirateArray.push(rightUpperLeg);
+
+  var rightLowerLeg = new Cube();
+  rightLowerLeg.color = clothesColor;
+  rightLowerLeg.matrix = new Matrix4(rightLegMatrixCoor)
+  rightLowerLeg.matrix.translate(0.0, 0.3, -0.4);
+  rightLowerLeg.matrix.rotate(-180, 1, 0, 0);
+  rightLowerLeg.matrix.scale(0.5, 1.0, 0.4);
+  //rightLowerLeg.renderfaster();
+  pirateArray.push(rightLowerLeg);
+
+  var leftUpperLeg = new Cube();
+  leftUpperLeg.color = clothesColor;
+  leftUpperLeg.matrix = new Matrix4(bodyCoordinatesMat)
+  leftUpperLeg.matrix.translate(-0.3, -2.9, -0.35);
+  leftUpperLeg.matrix.rotate(0, 0, 0, 1);
+  leftLegMatrixCoor = new Matrix4(leftUpperLeg.matrix)
+  leftUpperLeg.matrix.scale(0.5, 1.0, 0.4);
+  //leftUpperLeg.renderfaster();
+  pirateArray.push(leftUpperLeg);
+
+  var leftLowerLeg = new Cube();
+  leftLowerLeg.color = clothesColor;
+  leftLowerLeg.matrix = new Matrix4(leftLegMatrixCoor)
+  leftLowerLeg.matrix.translate(0.0, 0.3, -0.4);
+  leftLowerLeg.matrix.rotate(-180, 1, 0, 0);
+  leftLowerLeg.matrix.scale(0.5, 1.0, 0.4);
+  //leftLowerLeg.renderfaster();  
+  pirateArray.push(leftLowerLeg);
+
+  // Head
+  var head = new Cube();
+  head.color = [0.22, 0.58, 0.5, 1.0];
+  head.matrix = new Matrix4(bodyCoordinatesMat);
+  head.matrix.scale(0.7, 0.7, 0.7);
+  head.matrix.rotate(-g_headAnimation, 0, 1, 1);
+  var headCoordinatesMat = new Matrix4(head.matrix);
+  head.matrix.translate(-0.2, -0.51, -0.3);
+  var headCoordinatesMatrix = new Matrix4(head.matrix);
+  head.matrix.scale(1.0, 0.6, 1.0);
+  //head.renderfaster();
+  pirateArray.push(head);
+
+  // Middle Face Tentacles
+  var noseBridgeLeft= new Cube();
+  noseBridgeLeft.color = [0.1, 0.7, 0.6, 1.0];
+  noseBridgeLeft.matrix = new Matrix4(headCoordinatesMat);
+  noseBridgeLeft.matrix.translate(0.12, -0.25, -1.27);
+  noseBridgeLeft.matrix.rotate(-65, 0, 0, 1);
+  noseBridgeLeft.matrix.scale(0.05, 0.25, 0.11);
+  noseBridgeLeft.matrix.scale(1.5, 0.8, 0.7);
+  noseBridgeLeft.matrix.rotate(-10, 0, 0, 1);
+  //noseBridgeLeft.renderfaster();
+  pirateArray.push(noseBridgeLeft);
+
+  var noseBridgeRight = new Cube();
+  noseBridgeRight.color = [0.1, 0.7, 0.6, 1.0];
+  noseBridgeRight.matrix = new Matrix4(headCoordinatesMat);
+  noseBridgeRight.matrix.scale(-1.0, 1.0, 1.0);
+  noseBridgeRight.matrix.translate(-0.48, -0.25, -1.27);
+  noseBridgeRight.matrix.rotate(-65, 0, 0, 1);
+  noseBridgeRight.matrix.scale(0.05, 0.25, 0.11);
+  noseBridgeRight.matrix.scale(1.5, 0.8, 0.7);
+  noseBridgeRight.matrix.rotate(-10, 0, 0, 1);
+  //noseBridgeRight.renderfaster();
+  pirateArray.push(noseBridgeRight);
+
+  //Eyes
+  var leftEye = new Cube();
+  leftEye.color = [0.0, 0.0, 0.0, 1.0];
+  leftEye.matrix = new Matrix4(headCoordinatesMat);
+  leftEye.matrix.translate(0.05, -0.2, -1.21);
+  leftEye.matrix.scale(0.1, 0.15, 0.1);
+  leftEye.matrix.scale(1.0, g_eyeBlink, 1.0);
+  //leftEye.renderfaster();
+  pirateArray.push(leftEye);
+
+  var leftEyebrow = new Cube();
+  leftEyebrow.color = [0.12, 0.48, 0.4, 1.0];
+  leftEyebrow.matrix = new Matrix4(headCoordinatesMat);
+  leftEyebrow.matrix.translate(0.2, -0.12, -1.21);
+  leftEyebrow.matrix.rotate(65, 0, 0, 1);
+  leftEyebrow.matrix.scale(0.05, 0.25, 0.11);
+  //leftEyebrow.renderfaster();
+  pirateArray.push(leftEyebrow);
+
+  var leftEyeSunken = new Cube();
+  leftEyeSunken.color = [0.3, 0.48, 0.37, 1.0];
+  leftEyeSunken.matrix = new Matrix4(headCoordinatesMat);
+  leftEyeSunken.matrix.translate(0.22, -0.27, -1.199);
+  leftEyeSunken.matrix.rotate(30, 0, 0, 1);
+  leftEyeSunken.matrix.scale(0.15, 0.25, 0.11);
+  leftEyeSunken.matrix.rotate(65, 0, 0, 1);
+  //leftEyeSunken.renderfaster();
+
+  var rightEye = new Cube();
+  rightEye.color = [0.0, 0.0, 0.0, 1.0];
+  rightEye.matrix = new Matrix4(headCoordinatesMat);
+  rightEye.matrix.translate(0.45, -0.2, -1.21);
+  rightEye.matrix.scale(0.1, 0.15, 0.1);
+  rightEye.matrix.scale(1.0, g_eyeBlink, 1.0);
+  //rightEye.renderfaster();  
+  pirateArray.push(rightEye);
+
+  var rightEyebrow = new Cube();
+  rightEyebrow.color = [0.12, 0.48, 0.4, 1.0];
+  rightEyebrow.matrix = new Matrix4(headCoordinatesMat);
+  rightEyebrow.matrix.scale(-1.0, 1.0, 1.0);  
+  rightEyebrow.matrix.translate(-0.4, -0.12, -1.21);
+  rightEyebrow.matrix.rotate(65, 0, 0, 1);
+  rightEyebrow.matrix.scale(0.05, 0.25, 0.11);
+  //rightEyebrow.renderfaster();
+  pirateArray.push(rightEyebrow);
+
+  var rightEyeSunken = new Cube();
+  rightEyeSunken.color = [0.3, 0.48, 0.37, 1.0];
+  rightEyeSunken.matrix = new Matrix4(headCoordinatesMat);
+  rightEyeSunken.matrix.scale(-1.0, 1.0, 1.0);  
+  rightEyeSunken.matrix.translate(-0.4, -0.27, -1.199);
+  rightEyeSunken.matrix.rotate(30, 0, 0, 1);
+  rightEyeSunken.matrix.scale(0.15, 0.25, 0.11);
+  rightEyeSunken.matrix.rotate(65, 0, 0, 1);
+  //rightEyeSunken.renderfaster();
+
+  // Mouth
+  var mouthLeft = new Cube();
+  mouthLeft.color = [0.0, 0.0, 0.0, 1.0];
+  mouthLeft.matrix = new Matrix4(headCoordinatesMat);
+  mouthLeft.matrix.translate(0.21, -0.32, -1.27);
+  mouthLeft.matrix.rotate(-65, 0, 0, 1);
+  mouthLeft.matrix.scale(0.05, 0.25, 0.11);
+  mouthLeft.matrix.scale(0.4, 0.4, 0.4);
+  //mouthLeft.renderfaster();
+  pirateArray.push(mouthLeft);
+
+  var mouthRight = new Cube();
+  mouthRight.color = [0.0, 0.0, 0.0, 1.0];
+  mouthRight.matrix = new Matrix4(headCoordinatesMat);
+  mouthRight.matrix.scale(-1.0, 1.0, 1.0);  
+  mouthRight.matrix.translate(-0.4, -0.32, -1.27);
+  mouthRight.matrix.rotate(-65, 0, 0, 1);
+  mouthRight.matrix.scale(0.05, 0.25, 0.11);
+  mouthRight.matrix.scale(0.4, 0.4, 0.4);
+  //mouthRight.renderfaster();  
+  pirateArray.push(mouthRight);
+
+  // ----------------------------
+  // Davy Jones Hat
+  var hatColor = [0.08, 0.09, 0.15, 1.0];
+  var hatBase = new Cube();
+  hatBase.color = [0.67, 0.61, 0.44, 1.0];
+  hatBase.matrix = new Matrix4(headCoordinatesMat);
+  hatBase.matrix.translate(-0.201, 0.0, -0.27);
+  hatBaseCoorMatrix = new Matrix4(hatBase.matrix);
+  hatBase.matrix.scale(1.002, 0.311, 0.8);
+  hatBase.matrix.translate(0.0, 0.1, -0.32);
+  //hatBase.renderfaster();
+  pirateArray.push(hatBase);
+
+  var hatTop = new Cube();
+  hatTop.color = hatColor;
+  hatTop.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatTop.matrix.translate(-0.01, 0.35, -0.9);
+  hatTop.matrix.rotate(138, 1, 0, 0);
+  hatTop.matrix.scale(1.03, 1.1, 0.5)
+  //hatTop.renderfaster();
+  pirateArray.push(hatTop);
+
+  var hatBottom = new Cube();
+  hatBottom.color = hatColor;
+  hatBottom.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatBottom.matrix.translate(0.00, 0.35, -0.9);
+  hatBottom.matrix.rotate(138, 1, 0, 0);
+  hatBottom.matrix.scale(1.03, 1.15, 0.4)
+  hatBottom.matrix.rotate(17, 1, 0, 0);
+  //hatBottom.renderfaster();
+  pirateArray.push(hatBottom);
+
+  // ----------------------------
+  var hatFront = new Tetrahedron();
+  hatFront.color = hatColor;
+  hatFront.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatFront.matrix.scale(-1.0, 1.0, 1.0)
+  hatFront.matrix.translate(.39, 0.9, -1.05);
+  hatFront.matrix.rotate(223, 1, 0, 0);
+  hatFront.matrix.rotate(95, 0, 1, 0);
+  hatFront.matrix.rotate(0, 0, 0, 1);
+  hatFront.matrix.scale(1.5, 0.8, 1.8)
+  //hatFront.renderfaster();
+
+  var hatFrontR = new Tetrahedron();
+  hatFrontR.color = hatColor;
+  hatFrontR.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatFrontR.matrix.translate(1.39, 0.9, -1.05);
+  hatFrontR.matrix.rotate(223, 1, 0, 0);
+  hatFrontR.matrix.rotate(95, 0, 1, 0);
+  hatFrontR.matrix.rotate(0, 0, 0, 1);
+  hatFrontR.matrix.scale(1.5, 0.8, 1.8)
+  //hatFrontR.renderfaster();
+
+  // ----------------------------
+  var hatBack = new Tetrahedron();
+  hatBack.color = hatColor;
+  hatBack.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatBack.matrix.translate(1.0, 0.25, -0.7);
+  hatBack.matrix.rotate(292, 1, 0, 0);
+  hatBack.matrix.rotate(341, 0, 1, 0);
+  hatBack.matrix.rotate(244, 0, 0, 1);
+  hatBack.matrix.scale(1.3, 1.2, 0.6)
+  //hatBack.renderfaster();
+
+  var hatBack2 = new Tetrahedron();
+  hatBack2.color = hatColor;
+  hatBack2.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatBack2.matrix.scale(-1.0, 1.0, 1.0)
+  hatBack2.matrix.translate(0.0, 0.25, -0.7);
+  hatBack2.matrix.rotate(292, 1, 0, 0);
+  hatBack2.matrix.rotate(341, 0, 1, 0);
+  hatBack2.matrix.rotate(244, 0, 0, 1);
+  hatBack2.matrix.scale(1.3, 1.2, 0.6)
+  //hatBack2.renderfaster();
+
+  // Gold Trim
+  // Ugly way to do it, but tired and can't think of a better way
+  var trimColor = [0.85, 0.75, 0.46, 1.0];
+  hatFrontL = new Tetrahedron();
+  hatFrontL.color = trimColor;
+  hatFrontL.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatFrontL.matrix.scale(-1.0, 1.0, 1.0)
+  hatFrontL.matrix.translate(.41, 0.92, -1.08);
+  hatFrontL.matrix.rotate(223, 1, 0, 0);
+  hatFrontL.matrix.rotate(95, 0, 1, 0);
+  hatFrontL.matrix.rotate(0, 0, 0, 1);
+  hatFrontL.matrix.scale(1.5, 0.8, 1.8)
+  //hatFrontL.renderfaster();
+
+  hatFrontL = new Tetrahedron();
+  hatFrontL.color = hatColor;
+  hatFrontL.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatFrontL.matrix.scale(-1.0, 1.0, 1.0)
+  hatFrontL.matrix.translate(.42, 0.9, -1.09);
+  hatFrontL.matrix.rotate(223, 1, 0, 0);
+  hatFrontL.matrix.rotate(95, 0, 1, 0);
+  hatFrontL.matrix.rotate(0, 0, 0, 1);
+  hatFrontL.matrix.scale(1.5, 0.8, 1.8)
+  //hatFrontL.renderfaster();
+
+  //----------------------------
+  hatFrontR = new Tetrahedron();
+  hatFrontR.color = trimColor;
+  hatFrontR.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatFrontR.matrix.translate(1.41, 0.92, -1.08);
+  hatFrontR.matrix.rotate(223, 1, 0, 0);
+  hatFrontR.matrix.rotate(95, 0, 1, 0);
+  hatFrontR.matrix.rotate(0, 0, 0, 1);
+  hatFrontR.matrix.scale(1.5, 0.8, 1.8)
+  //hatFrontR.renderfaster();
+
+  hatFrontR = new Tetrahedron();
+  hatFrontR.color = hatColor;
+  hatFrontR.matrix = new Matrix4(hatBaseCoorMatrix);
+  hatFrontR.matrix.translate(1.42, 0.9, -1.09);
+  hatFrontR.matrix.rotate(223, 1, 0, 0);
+  hatFrontR.matrix.rotate(95, 0, 1, 0);
+  hatFrontR.matrix.rotate(0, 0, 0, 1);
+  hatFrontR.matrix.scale(1.5, 0.8, 1.8)
+  //hatFrontR.renderfaster();
 }
