@@ -4,8 +4,8 @@ class Camera {
         this.movementSpeed = 1;
         this.alpha = 1;
 
-        this.eye = new Vector3([30, 10, 0]);
-        this.at = new Vector3([-20000, 0, -1000]);
+        this.eye = new Vector3([18, 4, -17]);
+        this.at = new Vector3([-19000, -6, 7864]);
         this.up = new Vector3([0, 1, 0]);
 
         this.projectionMatrix = new Matrix4();        
@@ -85,6 +85,12 @@ class Camera {
         var distancePrime = rotationMatrix.multiplyVector3(distance);
         this.at.set(this.eye);
         this.at.add(distancePrime);
+
+        console.log(
+            this.eye.elements, 
+            this.at.elements,
+            this.up.elements
+        );
     }
 
     panRight( angle = this.alpha ) {

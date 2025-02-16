@@ -419,6 +419,11 @@ function main() {
   mountain.matrix.scale(50, 100, 50);
   drawMountains(mountainRange, new Matrix4(mountain.matrix))
 
+  var startTree = new Cube();
+  startTree.matrix.translate(-60, 0, -80);
+  startTree.renderfaster();
+  drawTrees(new Matrix4(startTree.matrix));
+
   requestAnimationFrame(tick);
 }
 
@@ -498,13 +503,8 @@ function renderAllShapes(ev) {
   island.matrix.scale(150, 10, 200);
   island.renderfaster();
 
-  // Draw the island mountains
-  var mountain = new Pyramid();
-  mountain.color = [0.25, 0.25, 0.25, 1.0];
-  mountain.matrix.translate(-150, -10, 50);
-  mountain.matrix.scale(50, 100, 50);
-  mountain.renderfaster();
   renderMountains();
+  renderTrees();
 
   var landHo = new Cube();
   landHo.matrix.translate(2, 0, -18);
@@ -529,7 +529,8 @@ function sendToTextHTML(text, htmlID) {
   htmlElm.innerHTML = text;
 }
 
-
+// Map Data
+// --------------------
 var mountainRange = [
   [ 0, [
     [1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -578,6 +579,106 @@ function drawMountains(map, positionMatrix) {
     }
   }
 }
+
+let tree_map = [
+  [ 0, [
+    [0, 0, 0],
+    [0, 1, 0],
+    [0, 0, 0],
+    ]
+  ],
+  [ 1, [
+    [0, 0, 0],
+    [0, 1, 0],
+    [0, 0, 0],
+    ]
+  ],
+  [ 2, [
+    [0, 0, 0],
+    [0, 1, 0],
+    [0, 0, 0],
+    ]
+  ],
+  [ 3, [
+    [0, 0, 0],
+    [0, 1, 0],
+    [0, 0, 0],
+    ]
+  ],
+  [ 4, [
+    [2, 2, 2],
+    [2, 2, 2],
+    [2, 2, 2],
+    ]
+  ],
+  [ 5, [
+    [0, 2, 0],
+    [2, 0, 2],
+    [0, 2, 0],
+    ]
+  ],
+  [ 6, [
+    [0, 0, 0],
+    [0, 2, 0],
+    [0, 0, 0],
+    ]
+  ]
+];
+
+let trees = [];
+function renderTrees() {
+  for(let i = 0; i < trees.length; i++) 
+  {
+    trees[i].renderfaster();
+  }
+}
+
+function drawTrees(positionMatrix) {
+  for (let x = 0; x < 12; x++) {
+    for (let y = 0; y < 20; y++) {
+      if (randomIntFromInterval(0, 4) === 1) {  // 25% chance to generate a tree
+        
+        let worldX = x * 5;  // Base world position for tree
+        let worldZ = y * 5;
+        let rotation = randomIntFromInterval(0, 89);
+
+        for (let layerIndex = 0; layerIndex < tree_map.length; layerIndex++) { // Iterate over tree_map layers
+          let height = tree_map[layerIndex][0];  // Height level of this layer
+          let boxArray = tree_map[layerIndex][1];  // Structure of the layer
+          for (let row = 0; row < boxArray.length; row++) {
+            for (let col = 0; col < boxArray[row].length; col++) {
+              if (boxArray[row][col] !== 0) {  // Only create a cube if it's not empty
+                
+                var body = new Cube();
+                body.textureNum = WOODTEXTURECOLOR;
+                body.color = [0.0, 0.0, 0.0, 1.0];  // Leaves
+
+                // Differentiate between trunk and leaves
+                if (boxArray[row][col] === 2) {
+                  body.color = [0.0, 0.5, 0.0, 1.0];  // Leaves
+                  body.textureNum = COLOR;
+                }
+
+                body.matrix = new Matrix4(positionMatrix);
+
+                body.matrix.translate(
+                  worldX + col - Math.floor(boxArray[row].length / 2), // Center X around trunk
+                  height,  // Correct height for the tree
+                  worldZ + row - Math.floor(boxArray.length / 2) // Center Z around trunk
+                );
+                body.matrix.rotate(rotation, 0, 1, 0);
+                trees.push(body);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
 
 var docks = [
   [ 0, [
@@ -852,7 +953,6 @@ var boat_map = [
     ]
   ]
 ]
-
 function drawMap(map, positionMatrix) {
   for (let x = 0; x < map.length; x++) {
     let height = map[x][0];
