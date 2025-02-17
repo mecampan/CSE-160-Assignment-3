@@ -440,7 +440,7 @@ function main() {
   drawMountains(mountainRange, new Matrix4(mountain.matrix))
 
   var startTree = new Cube();
-  startTree.matrix.translate(-45, 0, -80);
+  startTree.matrix.translate(-55, 0, -80);
   startTree.renderfaster();
   drawTrees(new Matrix4(startTree.matrix));
 
@@ -618,7 +618,7 @@ function drawMountains(map, positionMatrix) {
 
 let tree_map = [
   [ 0, [
-    [0, 0, 0],
+    [0, 3, 0],
     [0, 1, 0],
     [0, 0, 0],
     ]
@@ -663,51 +663,57 @@ function renderTrees() {
   }
 }
 
+var numTreasurePlaced = 0;
+
 function drawTrees(positionMatrix) {
-  for (let x = 0; x < 9; x++) {
+  for (let x = 0; x < 11; x++) {
     for (let y = 0; y < 22; y++) {
-      if (randomIntFromInterval(0, 1) === 1) {
-        
-        let worldX = x * 5;
-        let worldZ = y * 5;
+      if (randomIntFromInterval(0, 1) !== 0) continue; // 33% chance to place a tree
 
-        for (let layerIndex = 0; layerIndex < tree_map.length; layerIndex++) { 
-          let height = tree_map[layerIndex][0];  
-          let boxArray = tree_map[layerIndex][1]; 
+      let worldX = x * 5;
+      let worldZ = y * 5;
+      let treeRotation = randomIntFromInterval(0, 359);
 
-          for (let row = 0; row < boxArray.length; row++) {
-            for (let col = 0; col < boxArray[row].length; col++) {
-              if (boxArray[row][col] !== 0) { 
-                
-                var body = new Cube();
-                body.textureNum = WOODTEXTURECOLOR; // Tree trunk
-                body.color = [0.0, 0.0, 0.0, 1.0]; 
+      for (let layer of tree_map) { 
+        let height = layer[0];  
+        let boxArray = layer[1]; 
 
-                if (boxArray[row][col] === 2) { // Tree leaves
-                  body.color = [0.0, 0.35, 0.0, 1.0];
-                  body.textureNum = TREETEXTURECOLOR;
-                }
+        for (let row = 0; row < boxArray.length; row++) {
+          for (let col = 0; col < boxArray[row].length; col++) {
+            let blockType = boxArray[row][col];
+            if (blockType === 0) continue; // Skip empty spaces
 
-                body.matrix = new Matrix4(positionMatrix);
-                body.matrix.translate(
-                  worldX + col - Math.floor(boxArray[row].length / 2), // Center X around trunk
-                  height,  // Correct height for the tree
-                  worldZ + row - Math.floor(boxArray.length / 2) // Center Z around trunk
-                );
+            if (blockType === 3 && treeRotation > 10) continue; 
+            var body = new Cube();
+            body.matrix = new Matrix4(positionMatrix);
+            body.matrix.translate(
+              worldX + col - Math.floor(boxArray[row].length / 2), 
+              height,  
+              worldZ + row - Math.floor(boxArray.length / 2)
+            );
+            body.matrix.rotate(treeRotation, 0, 1, 0);
 
-                body.matrix.scale(1.0, 1.0, 1.0);
-                trees.push(body);
-              }
+            if (blockType === 3) {
+              numTreasurePlaced++;
+              body.color = [1.0, 0.9, 0.0, 1.0]; // Gold color
+              body.color = [0.1, 0.0, 0.1, 1.0];
+              body.matrix.scale(0.2, 0.2, 0.2);
+            } else {
+              // Normal tree blocks
+              body.textureNum = blockType === 2 ? TREETEXTURECOLOR : WOODTEXTURECOLOR;
+              body.color = blockType === 2 ? [0.0, 0.35, 0.0, 1.0] : [0.0, 0.0, 0.0, 1.0];
+              body.matrix.scale(1.0, 1.0, 1.0);
             }
+
+            trees.push(body);
           }
         }
       }
     }
   }
+  sendToTextHTML(`Number of Black Pearls on the Island: ${numTreasurePlaced}`, "numGold");
+
 }
-
-
-
 
 var docks = [
   [ 0, [
