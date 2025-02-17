@@ -323,6 +323,10 @@ function setupMouseCamera() {
 }
 
 function keydown(ev) {
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(ev.code)) {
+    ev.preventDefault();
+  }
+
   if(ev.code == 'KeyQ' || ev.code == 'ArrowUp'){
     camera.moveUp();
   }
@@ -546,8 +550,9 @@ function renderAllShapes(ev) {
   drawMap(docks, new Matrix4(landHo.matrix));
 
   var boat1 = new Cube();
-  boat1.matrix.translate(4, 0, -24);
+  boat1.matrix.translate(5, Math.sin(g_seconds) / 10, -25);
   boat1.matrix.rotate(90, 0, 1, 0);
+  boat1.matrix.rotate(Math.sin(g_seconds), 0, 0, 1);
   drawMap(boat_map, new Matrix4(boat1.matrix));
 
   renderDavyJones();
@@ -866,7 +871,7 @@ var boat_map = [
     [0],
     [0],
     [0],
-    [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
+    [0, 0, 0, 3, 3, 2, 3, 3, 0, 0, 0],
     [0],
     [0],
     [0],
@@ -1013,7 +1018,7 @@ function drawMap(map, positionMatrix) {
 
           body.matrix = new Matrix4(positionMatrix);
           
-          body.matrix.scale(0.6, 0.6, 0.6);
+          body.matrix.scale(0.8, 0.8, 0.8);
           body.matrix.translate(
             z - 4, // Adjust horizontal positioning
             height - 1.7, // Adjust height
@@ -1117,7 +1122,7 @@ function renderDavyJones()
   // Body if there is time
   upperBody = new Pyramid();
   upperBody.color = clothesColor;
-  upperBody.matrix.translate(5, 1.8, -26.5);
+  upperBody.matrix.translate(8, 1.3, -20.5);
   upperBody.matrix.rotate(-90, 0, 1, 0);
   upperBody.matrix.scale(0.3, 0.3, 0.3);
   var bodyCoordinatesMat = new Matrix4(upperBody.matrix);
