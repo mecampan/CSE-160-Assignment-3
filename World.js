@@ -99,6 +99,7 @@ let u_ViewMatrix;
 let u_GlobalRotateMatrix;
 let u_Sampler;
 let u_WoodTexture;
+let u_WaterTexture;
 let u_RockTexture;
 let u_TreeTexture;
 let u_whichTexture;
@@ -188,6 +189,13 @@ function connectVariablesToGLSL() {
     console.log(`Failed to get the storage location of u_WoodTexture`);
     return;
   }
+  
+  // Get the storage location of the u_WaterTexture
+  u_WaterTexture = gl.getUniformLocation(gl.program, 'u_WaterTexture');
+  if(!u_WaterTexture) {
+    console.log(`Failed to get the storage location of u_WaterTexture`);
+    return;
+  }
 
   // Get the storage location of the u_RockTexture
   u_RockTexture = gl.getUniformLocation(gl.program, 'u_RockTexture');
@@ -261,7 +269,7 @@ function addActionsforHtmlUI() {
   document.getElementById('bodyAnimationButtonOn').onclick = function() { g_bodyAnimationOn = true; };
   document.getElementById('bodyAnimationButtonOff').onclick = function() { g_bodyAnimationOn = false; };
 
-  document.getElementById('rainButtonOn').onclick = function() { g_rainAnimation = true; };
+  document.getElementById('rainButtonOn').onclick = function() { g_rainAnimation = true;   createRain(); };
   document.getElementById('rainButtonOff').onclick = function() { g_rainAnimation = false; };
 
   document.getElementById('pirateMusicButton').onclick = function() {
@@ -315,10 +323,10 @@ function setupMouseCamera() {
 }
 
 function keydown(ev) {
-  if(ev.code == 'KeyQ'){
+  if(ev.code == 'KeyQ' || ev.code == 'ArrowUp'){
     camera.moveUp();
   }
-  else if(ev.code == 'KeyE'){
+  else if(ev.code == 'KeyE' || ev.code == 'ArrowDown'){
     camera.moveDown();
   }
 
@@ -335,10 +343,10 @@ function keydown(ev) {
     camera.moveRight();
   }
 
-  else if(ev.code == 'KeyZ'){
+  else if(ev.code == 'KeyZ' || ev.code == 'ArrowLeft'){
     camera.panLeft();
   }
-  else if(ev.code == 'KeyX'){
+  else if(ev.code == 'KeyX' || ev.code == 'ArrowRight'){
     camera.panRight();
   }
 }
@@ -413,7 +421,7 @@ function main() {
 
   initTextures('sky.jpg', u_Sampler, SKYTEXTURE);
   initTextures('woodBlock.jpg', u_WoodTexture, WOODTEXTURE);
-  initTextures('Water.jpg', u_WoodTexture, WATERTEXTURE);
+  initTextures('Water.jpg', u_WaterTexture, WATERTEXTURE);
   initTextures('Rock.jpg', u_RockTexture, ROCKTEXTURE);
   initTextures('leaves.png', u_TreeTexture, TREETEXTURE);
 
@@ -423,7 +431,6 @@ function main() {
 
   camera = new Camera();
   document.onkeydown = keydown;
-  createRain();
 
   // Draw the island mountains
   var mountain = new Pyramid();
@@ -1020,7 +1027,10 @@ function randomIntFromInterval(min, max) { // min and max included
 
 let raindrops = [];
 function createRain() {
-  for (let i = 0; i < 30000; i++) {
+  raindrops = [];
+  rainCount = document.getElementById('rainDrops').value;
+
+  for (let i = 0; i < rainCount; i++) {
     let xPos = randomIntFromInterval(-2000, 2000);
     let zPos = randomIntFromInterval(-2000, 2000);
     let yPos = randomIntFromInterval(0, 300);
